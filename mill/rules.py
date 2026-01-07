@@ -316,3 +316,11 @@ def is_terminal(state: GameState) -> bool:
     if winner(state) is not None:
         return True
     return False
+
+
+def phase_for(state: GameState, player: Stone) -> str:
+    """
+    Öffentliche API.
+    Wrapper um _phase_for(), damit andere Module nicht an private Helper gekoppelt sind.
+    """
+    return _phase_for(state, player)
