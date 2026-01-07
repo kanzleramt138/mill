@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Dict, Set, List, Tuple
 
 from .graph import MILLS, NEIGHBORS
-from .state import GameState, Stone, opponent
+from .state import GameState, Stone, opponent, Phase
 from .rules import phase_for, Action, legal_actions, apply_action
 
 def compute_threat_squares(state: GameState, player: Stone) -> Set[int]:
@@ -36,7 +36,7 @@ def mobility_by_pos(state: GameState, player: Stone) -> Dict[int, int]:
       - sonst (PLACING): 0 für alle (nicht definiert)
     """
     board = state.board
-    phase = phase_for(state, player)
+    phase: Phase = phase_for(state, player)
     result: Dict[int, int] = {}
 
     if phase not in ("moving", "flying"):
