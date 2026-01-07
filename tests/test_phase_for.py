@@ -57,3 +57,29 @@ def test_phase_for_flying_when_no_in_hand_and_exactly_3_on_board() -> None:
     )
 
     assert phase_for(state, Stone.WHITE) == "flying"
+
+
+def test_phase_for_uses_callable_state_phase() -> None:
+    class DummyState:
+        def phase(self, player: Stone) -> str:  # noqa: ARG002
+            return "moving"
+
+    s = DummyState()
+    assert phase_for(s, Stone.WHITE) == "moving"  # type: ignore[arg-type]
+
+
+def test_phase_for_accepts_string_phase_attr() -> None:
+    class DummyState:
+        phase = "placing"
+
+    s = DummyState()
+    assert phase_for(s, Stone.BLACK) == "placing"  # type: ignore[arg-type]
+
+
+def test_phase_for_falls_back_to_phase_str() -> None:
+    class DummyState:
+        phase = None
+        phase_str = "flying"
+
+    s = DummyState()
+    assert phase_for(s, Stone.WHITE) == "flying"  # type: ignore[arg-type]
