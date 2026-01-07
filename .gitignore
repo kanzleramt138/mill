@@ -5,6 +5,11 @@ __pycache__/
 .pytest_cache/
 .mypy_cache/
 .pyright/
+.ruff_cache/
+
+# Packaging
+*.egg-info/
+.eggs/
 
 # Virtual env
 venv/
@@ -12,6 +17,10 @@ venv/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Env files
+.env
+.env.*
 
 # Node
 node_modules/
@@ -22,3 +31,9 @@ build/
 .DS_Store
 Thumbs.db
 .vscode/
+.idea/
+
+# Coverage
+.coverage
+coverage.xml
+htmlcov/
