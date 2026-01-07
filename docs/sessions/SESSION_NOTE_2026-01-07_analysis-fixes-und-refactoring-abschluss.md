@@ -41,3 +41,4 @@
 - [ ] [.github/copilot-instructions.md](../.github/copilot-instructions.md) unverändert
 - [ ] [docs/DEV_NOTES.md](DEV_NOTES.md) unverändert
 - [ ] „Context-Reset“-Abschnitt in der Note ausgefüllt (siehe Abschnitt 0)
+
