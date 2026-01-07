@@ -31,18 +31,19 @@
 - Semantik (wichtig!):
 
 ## 5) Tests / Status
-- `pytest -q`:
-- Neue Tests:
-- Bekannte Failing/Skipped:
+- `pytest -q`: ✅ 29 passed
+- Neue Tests: `tests/test_phase_for.py` (3 GameState-Cases + 3 Wrapper-Behavior-Tests)
+- PR #3 „Refactor/remove private phase coupling" gemerged → `phase_for` öffentliche API, `analysis.py` entkoppelt
 
 ## 6) Offene Punkte / Risiken
 - Refactorings dürfen keine Regel- oder State-Invarianten verwässern (Backend bleibt „source of truth“).
 - Frontend bleibt „static“ (kein Build) — keine ESM-Umstellung ohne bewusstes Build-Setup.
 
 ## 7) Nächste Schritte (konkret)
-1. Nächstes Feature als echter Session-Branch + PR: z. B. Mobility/Blocked-Overlay oder „Forced Mills“ (siehe Baseline-Note).
-2. Optional: MIT-License hinzufügen, falls Repo public und Weiterverwendung erwünscht.
-3. Optional: Demo-Datei `docs/PR_DEMO.md` wieder entfernen, falls sie noch im `main` liegt (zweiter Übungs-PR).
+1. ✅ DONE: `phase_for` öffentlich machen, `_phase_for` private Kopplung entfernen
+2. **TODO: `Phase` als `Literal["placing","moving","flying"]` zentralisieren** (mill/state.py)
+3. TODO: Eval-Breakdown & Threat-Report für Engine-API vorbereiten
+4. TODO: erste Engine-Stub (Minimax-Skeleton) skizzieren
 
 ## 8) Doc-Sync Checklist (Ende der Session)
 - [ ] [docs/PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md) aktualisiert (falls Architektur/Module sich geändert haben)
