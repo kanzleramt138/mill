@@ -1,0 +1,5 @@
+# Runtime dependencies
+streamlit>=1.52
+
+# Test/dev dependencies (kept here for simplicity)
+pytest>=9.0
