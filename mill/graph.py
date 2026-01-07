@@ -3,6 +3,14 @@ from __future__ import annotations
 
 from typing import Dict, List, Tuple
 
+
+__all__ = [
+    "MILLS",
+    "NEIGHBORS",
+    "GRID_7x7",
+]
+
+
 # 24 positions indexed 0..23
 # Grid layout (7x7) for UI placement (None = empty cell)
 GRID_7x7 = [

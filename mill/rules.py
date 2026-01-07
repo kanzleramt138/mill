@@ -31,9 +31,13 @@ __all__ = [
 ]
 
 
+
+ActionKind = Literal["place", "move", "remove"]
+
+
 @dataclass(frozen=True)
 class Action:
-    kind: str                 # "place" | "move" | "remove"
+    kind: ActionKind                 # "place" | "move" | "remove"
     src: Optional[int] = None
     dst: Optional[int] = None
 
