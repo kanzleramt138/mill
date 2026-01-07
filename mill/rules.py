@@ -42,6 +42,13 @@ def _phase_for(state: GameState, player: Stone) -> str:
     # last resort: ask for to_move phase if method exists with different name
     return str(getattr(state, "phase_str", "unknown"))
 
+def phase_for(state: GameState, player: Stone) -> str:
+    """
+    Öffentliche API.
+    Wrapper um _phase_for(), damit andere Module nicht an private Helper gekoppelt sind.
+    """
+    return _phase_for(state, player)
+
 
 def mills_containing(pos: int) -> List[Tuple[int, int, int]]:
     return [m for m in MILLS if pos in m]
@@ -69,7 +76,7 @@ def position_key_from_state(state: GameState) -> int:
     board_seq = list(getattr(state, "board"))
     to_move = getattr(state, "to_move")
     pending_remove = bool(getattr(state, "pending_remove", False))
-    phase = _phase_for(state, to_move)
+    phase = phase_for(state, to_move)
 
     payload = "|".join(
         [
@@ -96,7 +103,7 @@ def advance_draw_tracker(
     - position_history: deterministisch, seeded mit initialer Position
     """
     mover: Stone = getattr(prev, "to_move")
-    prev_phase = _phase_for(prev, mover)
+    prev_phase = phase_for(prev, mover)
 
     # seed history with initial position if missing
     hist = prev.draw.position_history
@@ -172,7 +179,7 @@ def legal_actions(state: GameState) -> List[Action]:
         victim = opponent(p)
         return [Action(kind="remove", dst=i) for i in removable_positions(state, victim)]
 
-    phase = state.phase(p)
+    phase = phase_for(state, p)
 
     if phase == "placing":
         # place on any empty
@@ -289,7 +296,7 @@ def winner(state: GameState) -> Optional[Stone]:
     """
     # 1) <3 Steine → Gegner gewinnt (nur außerhalb der Placing-Phase sinnvoll)
     for player in (Stone.WHITE, Stone.BLACK):
-        phase_p = _phase_for(state, player)
+        phase_p = phase_for(state, player)
         if phase_p in ("moving", "flying"):
             if _stones_on_board(state, player) < 3:
                 return opponent(player)
@@ -297,7 +304,7 @@ def winner(state: GameState) -> Optional[Stone]:
     # 2) keine legalen Züge für side-to-move in moving/flying (kein pending_remove)
     if not state.pending_remove:
         tm = state.to_move
-        phase_tm = _phase_for(state, tm)
+        phase_tm = phase_for(state, tm)
         if phase_tm in ("moving", "flying"):
             if len(legal_actions(state)) == 0:
                 return opponent(tm)
