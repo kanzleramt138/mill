@@ -7,6 +7,7 @@ from typing import Dict, List, Tuple
 __all__ = [
     "MILLS",
     "NEIGHBORS",
+    "GRID_7x7",
 ]
 
 
