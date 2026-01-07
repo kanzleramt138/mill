@@ -31,7 +31,9 @@ __all__ = [
 ]
 
 
+
 ActionKind = Literal["place", "move", "remove"]
+
 
 @dataclass(frozen=True)
 class Action:
