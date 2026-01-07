@@ -37,7 +37,7 @@
 3. Search-Scaffold aufsetzen (Alpha-Beta/ID, Eval-Breakdown, API `engine.analyze`/`engine.best_move`), gemäß Notizen in txt.txt
 
 ## 8) Doc-Sync Checklist (Ende der Session)
-- [x] [docs/PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md) unverändert (kein Update nötig)
-- [x] [.github/copilot-instructions.md](../.github/copilot-instructions.md) unverändert
-- [x] [docs/DEV_NOTES.md](DEV_NOTES.md) unverändert
-- [x] „Context-Reset“-Abschnitt in der Note ausgefüllt (siehe Abschnitt 0)
+- [ ] [docs/PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md) unverändert (kein Update nötig)
+- [ ] [.github/copilot-instructions.md](../.github/copilot-instructions.md) unverändert
+- [ ] [docs/DEV_NOTES.md](DEV_NOTES.md) unverändert
+- [ ] „Context-Reset“-Abschnitt in der Note ausgefüllt (siehe Abschnitt 0)
