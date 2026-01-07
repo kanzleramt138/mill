@@ -1,3 +1,4 @@
+# tests/test_analysis.py
 from dataclasses import replace
 
 from mill.state import GameState, Stone
@@ -178,22 +179,18 @@ def test_mobility_profile_counts_stones_and_blocked_ratio() -> None:
     board[free_pos] = Stone.WHITE
     board[another_free] = Stone.WHITE
 
-    state = replace(
-        base,
+    state = GameState(
         board=tuple(board),
         to_move=Stone.WHITE,
         in_hand_white=0,
         in_hand_black=0,
         pending_remove=False,
+        turn_no=0,
     )
 
     prof = mobility_profile(state, Stone.WHITE)
-
     assert prof["total_stones"] == 3.0
-    # Verhältnis ist immer wohldefiniert
-    assert 0.0 <= prof["blocked_ratio"] <= 1.0
-    # Konsistenz: movable + blocked darf total nicht überschreiten
-    assert prof["movable_count"] + prof["blocked_count"] <= prof["total_stones"]
+    assert prof["blocked"] == 1.0  # nur der eine Stein ist blockiert
 
 def test_evaluate_light_prefers_state_with_more_threats() -> None:
     base = GameState.initial()
