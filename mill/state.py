@@ -3,13 +3,16 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 from enum import IntEnum
-from typing import Tuple
+from typing import Literal, Tuple
 
 
 class Stone(IntEnum):
     EMPTY = 0
     WHITE = 1
     BLACK = 2
+
+# Type alias: phases are strictly typesafe
+Phase = Literal["placing", "moving", "flying"]
 
 
 def opponent(p: Stone) -> Stone:
@@ -61,7 +64,7 @@ class GameState:
     def stones_on_board(self, p: Stone) -> int:
         return sum(1 for x in self.board if x == p)
 
-    def phase(self, p: Stone) -> str:
+    def phase(self, p: Stone) -> Phase:
         # Classic:
         # - placing while in_hand > 0
         # - moving when in_hand == 0 and stones_on_board > 3
