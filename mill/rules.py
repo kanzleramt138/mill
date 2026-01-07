@@ -9,6 +9,28 @@ from .graph import MILLS, NEIGHBORS
 from .state import GameState, Stone, opponent, DrawTracker, Phase
 
 
+# Public API of this module:
+__all__ = [
+    "Action",
+    "DrawReason",
+    "DRAW_NO_MILL_MOVES",
+    "DRAW_THREEFOLD_REPETITIONS",
+    "phase_for",
+    "mills_containing",
+    "is_pos_in_mill",
+    "position_key_from_state",
+    "advance_draw_tracker",
+    "draw_reason",
+    "forms_mill_after_placement",
+    "is_part_of_mill",
+    "removable_positions",
+    "legal_actions",
+    "apply_action",
+    "winner",
+    "is_terminal",
+]
+
+
 @dataclass(frozen=True)
 class Action:
     kind: str                 # "place" | "move" | "remove"
