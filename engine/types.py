@@ -2,7 +2,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal, Optional, TypedDict, List
 
-MoveKind = Literal["place", "move", "fly"]
+MoveKind = Literal["place", "move", "fly", "remove"]
 
 @dataclass(frozen=True)
 class Ply:
