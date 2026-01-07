@@ -1,0 +1,244 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <style>
+    body { margin: 0; padding: 0; background: transparent; }
+    .wrap { position: relative; width: 640px; height: 640px; }
+    .wrap svg { width: 640px; height: 640px; display: block; border-radius: 24px; }
+
+    .hotspots {
+      position: absolute;
+      inset: 0;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    .hotspot {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      width: 46px;
+      height: 46px;
+      border-radius: 999px;
+      cursor: pointer;
+      background: transparent;
+      pointer-events: auto;
+      touch-action: manipulation;
+    }
+
+    .overlays { position: absolute; inset: 0; z-index: 20; pointer-events: none; }
+
+    .ring {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      width: 46px;
+      height: 46px;
+      border-radius: 999px;
+      box-sizing: border-box;
+    }
+    
+    .ring.selected {
+      border: 4px solid rgba(0,255,122,0.33);
+      background: rgba(0,255,122,0.18);
+    }
+
+    .ring.target {
+      border: 4px solid rgba(0,122,255,0.33);
+      background: rgba(0,122,255,0.18);
+    }
+
+    .ring.removable {
+      border: 4px solid rgba(255,0,0,0.33);
+      background: rgba(255,0,0,0.18);
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap" id="root"></div>
+
+  <!-- cache-bust, sonst hängt man gerne auf altem JS -->
+  <script src="./streamlit-component-lib.js?v=4"></script>
+
+  <script>
+    const root = document.getElementById("root");
+
+    // local UI state
+    let selectedSrc = null;
+
+    // neighbours (must match backend)
+    const NEIGHBOURS = {
+      0: [1, 9],
+      1: [0, 2, 4],
+      2: [1, 14],
+      3: [4, 10],
+      4: [1, 3, 5, 7],
+      5: [4, 13],
+      6: [7, 11],
+      7: [4, 6, 8],
+      8: [7, 12],
+      9: [0, 10, 21],
+      10: [3, 9, 11, 18],
+      11: [6, 10, 15],
+      12: [8, 13, 17],
+      13: [5, 12, 14, 20],
+      14: [2, 13, 23],
+      15: [11, 16],
+      16: [15, 17, 19],
+      17: [12, 16],
+      18: [10, 19],
+      19: [16, 18, 20, 22],
+      20: [13, 19],
+      21: [9, 22],
+      22: [19, 21, 23],
+      23: [14, 22],
+    };
+
+    function computeLegalTargets(board, phase, src) {
+      const targets = new Set();
+      if (src === null) return targets;
+
+      if (phase === "moving") {
+        for (const dst of (NEIGHBOURS[src] || [])) {
+          if (board[dst] === 0) targets.add(dst);
+        }
+        return targets;
+      }
+
+      if (phase === "flying") {
+        for (let dst = 0; dst < board.length; dst++) {
+          if (board[dst] === 0) targets.add(dst);
+        }
+        return targets;
+      }
+
+      return targets;
+    }
+
+    function hotspotByPos(hotspots, pos) {
+      for (const h of hotspots) if (h.pos === pos) return h;
+      return null;
+    }
+
+    function render(args) {
+      const svg = args.svg || "";
+      const hotspots = args.hotspots || [];
+      const board = args.board || [];
+      const toMove = args.to_move;
+      const phase = args.phase;
+      const pendingRemove = !!args.pending_remove;
+      const removables = new Set(args.removables || []);
+      const hintsEnabled = !!args.hints_enabled;
+
+      // selection only during move/fly and only if still own stone
+      if (pendingRemove || phase === "placing") selectedSrc = null;
+      if (selectedSrc !== null && board[selectedSrc] !== toMove) selectedSrc = null;
+
+      const legalTargets =
+        (hintsEnabled && !pendingRemove && (phase === "moving" || phase === "flying"))
+          ? computeLegalTargets(board, phase, selectedSrc)
+          : new Set();
+
+      const removableRings = (hintsEnabled && pendingRemove) ? [...removables] : [];
+
+      let selectedRing = "";
+      if (selectedSrc !== null) {
+        const h = hotspotByPos(hotspots, selectedSrc);
+        if (h) selectedRing = `<div class="ring selected" style="left:${h.left}%; top:${h.top}%;"></div>`;
+      }
+
+      const targetRings = [...legalTargets].map(p => {
+        const h = hotspotByPos(hotspots, p);
+        if (!h) return "";
+        return `<div class="ring target" style="left:${h.left}%; top:${h.top}%;"></div>`;
+      }).join("");
+
+      const removeRings = removableRings.map(p => {
+        const h = hotspotByPos(hotspots, p);
+        if (!h) return "";
+        return `<div class="ring removable" style="left:${h.left}%; top:${h.top}%;"></div>`;
+      }).join("");
+
+      root.innerHTML = `
+        ${svg}
+        <div class="hotspots">
+          ${hotspots.map(h => `
+            <div class="hotspot"
+                 data-pos="${h.pos}"
+                 style="left:${h.left}%; top:${h.top}%;"></div>
+          `).join("")}
+        </div>
+        <div class="overlays">
+          ${selectedRing}
+          ${targetRings}
+          ${removeRings}
+        </div>
+      `;
+
+      // attach handlers (elements are new after innerHTML)
+      root.querySelectorAll(".hotspot").forEach(el => {
+        el.addEventListener("pointerdown", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+
+          const pos = parseInt(el.getAttribute("data-pos"), 10);
+
+          if (pendingRemove) {
+            if (removables.has(pos)) {
+              Streamlit.setComponentValue({ kind: "remove", dst: pos, nonce: Date.now() });
+            }
+            return;
+          }
+
+          if (phase === "placing") {
+            if (board[pos] === 0) {
+              Streamlit.setComponentValue({ kind: "place", dst: pos, nonce: Date.now() });
+            }
+            return;
+          }
+
+          // moving/flying: local selection then commit move
+          if (selectedSrc === null) {
+            if (board[pos] === toMove) {
+              selectedSrc = pos;
+              render(args);
+            }
+            return;
+          }
+
+          if (board[pos] === toMove) {
+            selectedSrc = pos;
+            render(args);
+            return;
+          }
+
+          if (board[pos] !== 0) return;
+
+          if (phase === "moving") {
+            const neighbours = NEIGHBOURS[selectedSrc] || [];
+            if (!neighbours.includes(pos)) return;
+          }
+
+          Streamlit.setComponentValue({ kind: "move", src: selectedSrc, dst: pos, nonce: Date.now() });
+          selectedSrc = null;
+        }, { passive: false });
+      });
+
+      // set height after DOM updated
+      requestAnimationFrame(() => Streamlit.setFrameHeight(660));
+    }
+
+    if (typeof Streamlit === "undefined") {
+      root.innerHTML =
+        "<div style='padding:12px;font:14px system-ui;color:#b00020;'>Streamlit JS not loaded. Check streamlit-component-lib.js next to index.html</div>";
+    } else {
+      Streamlit.events.addEventListener(Streamlit.RENDER_EVENT, (event) => {
+        render((event.detail && event.detail.args) ? event.detail.args : {});
+      });
+
+      // IMPORTANT: call ready AFTER listener
+      Streamlit.setComponentReady();
+    }
+  </script>
+</body>
+</html>
