@@ -3,6 +3,8 @@
 ## Kontext
 Dieses Repo implementiert „Mühle“ (Nine Men's Morris) als Streamlit-App mit einem Custom Component Board.
 
+**Sprache:** Bitte Antworten standardmäßig auf Deutsch. (Englisch nur, wenn ausdrücklich gewünscht oder für kurze Fachbegriffe/Bezeichner nötig.)
+
 **Produktziel:** Trainings- und Analyse-Tool (ähnlich „chess.com“-Denke), nicht nur ein Spiel.  
 **Oberziel:** robust, deterministisch, testbar; KI-bereit (später), aber zunächst ohne KI-Suche.
 
