@@ -179,7 +179,7 @@ def legal_actions(state: GameState) -> List[Action]:
         victim = opponent(p)
         return [Action(kind="remove", dst=i) for i in removable_positions(state, victim)]
 
-    phase = state.phase(p)
+    phase = phase_for(state, p)
 
     if phase == "placing":
         # place on any empty
