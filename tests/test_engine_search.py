@@ -118,6 +118,10 @@ def test_top_moves_breakdown_diff_matches_best_move() -> None:
     for sm in result.top_moves:
         assert sm.breakdown
         assert sm.breakdown_diff
-        for key, best_val in best.breakdown.items():
-            expected = best_val - sm.breakdown.get(key, 0.0)
+        # Verify that breakdown_diff includes keys from union of both breakdowns
+        all_keys = set(best.breakdown) | set(sm.breakdown)
+        assert set(sm.breakdown_diff.keys()) == all_keys
+        # Verify the diff values are correct for all keys
+        for key in all_keys:
+            expected = best.breakdown.get(key, 0.0) - sm.breakdown.get(key, 0.0)
             assert sm.breakdown_diff.get(key, 0.0) == expected
