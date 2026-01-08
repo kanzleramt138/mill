@@ -1,11 +1,15 @@
 # mill/analysis.py
 from __future__ import annotations
 
-from typing import Dict, Set, List, Tuple
+from dataclasses import replace
+from typing import Dict, Set, List, Tuple, TYPE_CHECKING
 
 from .graph import MILLS, NEIGHBORS
 from .state import GameState, Stone, opponent, Phase
-from .rules import phase_for, Action, legal_actions, apply_action
+from .rules import phase_for, Action, legal_actions, apply_action, removable_positions
+
+if TYPE_CHECKING:
+    from engine.types import Ply
 
 
 def _empty_positions(board: Tuple[Stone, ...]) -> List[int]:
@@ -196,3 +200,79 @@ def scored_actions_for_to_move(
 
     scored.sort(key=lambda t: t[1], reverse=True)
     return scored[:max_candidates]
+
+
+def _apply_ply_for_analysis(state: GameState, ply: "Ply") -> GameState:
+    player = state.to_move
+
+    if state.pending_remove:
+        if ply.kind != "remove" or ply.remove is None:
+            raise ValueError("State verlangt Remove; ply.kind muss 'remove' sein")
+        return apply_action(state, Action(kind="remove", dst=ply.remove))
+
+    if ply.kind == "remove":
+        raise ValueError("Remove-Ply ist nur erlaubt, wenn pending_remove True ist")
+
+    if ply.kind == "fly" and phase_for(state, player) != "flying":
+        raise ValueError("Fly-Ply ist nur in der Flying-Phase erlaubt")
+
+    if ply.kind == "place":
+        if ply.dst is None:
+            raise ValueError("Place-Ply benoetigt dst")
+        mid = apply_action(state, Action(kind="place", dst=ply.dst))
+    else:
+        if ply.src is None or ply.dst is None:
+            raise ValueError("Move/Fly-Ply benoetigt src und dst")
+        mid = apply_action(state, Action(kind="move", src=ply.src, dst=ply.dst))
+
+    if mid.pending_remove:
+        if ply.remove is None:
+            removables = removable_positions(mid, opponent(player))
+            if removables:
+                raise ValueError("Ply muss Remove enthalten, da eine Muehle geschlossen wurde")
+            return replace(mid, pending_remove=False)
+        return apply_action(mid, Action(kind="remove", dst=ply.remove))
+
+    if ply.remove is not None:
+        raise ValueError("Remove nur erlaubt, wenn eine Muehle geschlossen wurde")
+    return mid
+
+
+def tactic_hints_for_ply(state: GameState, ply: Ply) -> Dict[str, object]:
+    """
+    Liefert taktische Hinweise für einen Halbzug:
+      - verpasste Mill-in-1 Chance (vor dem Zug)
+      - eröffnete Mill-in-1 Chance für den Gegner (nach dem Zug)
+      - blockierte Steine beider Seiten (nach dem Zug)
+    """
+    player = state.to_move
+    opp = opponent(player)
+
+    threats_before_self = compute_threat_squares(state, player)
+    threats_before_opp = compute_threat_squares(state, opp)
+
+    used_threat_square = None
+    if ply.kind in ("place", "move", "fly") and ply.dst is not None:
+        if ply.dst in threats_before_self:
+            used_threat_square = ply.dst
+
+    missed_mill_in_1 = False
+    if ply.kind != "remove" and threats_before_self and used_threat_square is None:
+        missed_mill_in_1 = True
+
+    next_state = _apply_ply_for_analysis(state, ply)
+    threats_after_opp = compute_threat_squares(next_state, opp)
+    new_opp_threats = threats_after_opp - threats_before_opp
+
+    blocked_white = blocked_stones(next_state, Stone.WHITE)
+    blocked_black = blocked_stones(next_state, Stone.BLACK)
+
+    return {
+        "missed_mill_in_1": missed_mill_in_1,
+        "missed_threats": threats_before_self,
+        "used_threat_square": used_threat_square,
+        "allowed_mill_in_1": bool(new_opp_threats),
+        "allowed_threats": new_opp_threats,
+        "blocked_white": blocked_white,
+        "blocked_black": blocked_black,
+    }

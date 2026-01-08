@@ -27,6 +27,7 @@ from mill.analysis import (
     blocked_stones,
     scored_actions_for_to_move,
     evaluate_light,
+    tactic_hints_for_ply,
 )
 from engine import analyze, AnalysisResult, EvalWeights, Limits
 from engine.movegen import apply_ply, legal_plies
@@ -338,6 +339,43 @@ def _classify_move_loss(delta: float, thresholds: dict[str, float]) -> str:
     return "Blunder"
 
 
+def _format_hint_bullets(hints: dict[str, object]) -> list[str]:
+    bullets: list[str] = []
+    missed = bool(hints.get("missed_mill_in_1"))
+    if missed:
+        missed_threats = hints.get("missed_threats", set())
+        if isinstance(missed_threats, set):
+            bullets.append(f"Mill-in-1 verpasst: {_format_positions(missed_threats)}")
+        else:
+            bullets.append("Mill-in-1 verpasst")
+
+    allowed = bool(hints.get("allowed_mill_in_1"))
+    if allowed:
+        allowed_threats = hints.get("allowed_threats", set())
+        if isinstance(allowed_threats, set):
+            bullets.append(f"Gegner bekommt Mill-in-1: {_format_positions(allowed_threats)}")
+        else:
+            bullets.append("Gegner bekommt Mill-in-1")
+
+    blocked_white = hints.get("blocked_white", set())
+    blocked_black = hints.get("blocked_black", set())
+    if isinstance(blocked_white, set) and isinstance(blocked_black, set):
+        bullets.append(
+            f"Blockierte Steine nach Zug: W {len(blocked_white)} / B {len(blocked_black)}"
+        )
+    return bullets
+
+
+def _render_tactic_hints(state: GameState, ply) -> None:
+    try:
+        hints = tactic_hints_for_ply(state, ply)
+    except ValueError:
+        return
+    bullets = _format_hint_bullets(hints)
+    if bullets:
+        st.markdown("\n".join(f"- {b}" for b in bullets))
+
+
 def _find_transition_ply(prev_state: GameState, next_state: GameState):
     for ply in legal_plies(prev_state):
         try:
@@ -484,6 +522,7 @@ def render_analysis_panel(state: GameState) -> None:
             }
             if result.best_move is not None:
                 st.write(f"Best move: {_format_ply(result.best_move)} (score {result.score:.2f})")
+                _render_tactic_hints(state, result.best_move)
             if result.pv:
                 st.write("PV:")
                 st.code(_format_pv(result.pv), language="text")
@@ -498,6 +537,7 @@ def render_analysis_panel(state: GameState) -> None:
                     loss = max(0.0, best_score - sm.score)
                     label = _classify_move_loss(loss, thresholds)
                     st.write("%s: %.2f (loss %.2f, %s)" % (_format_ply(sm.ply), sm.score, loss, label))
+                    _render_tactic_hints(state, sm.ply)
                     if sm.pv:
                         st.code(_format_pv(sm.pv), language="text")
 
@@ -524,6 +564,7 @@ def render_analysis_panel(state: GameState) -> None:
                             break
                     if last_score is None:
                         st.write(f"Last move: {_format_ply(last_ply)} (not in Top-N)")
+                        _render_tactic_hints(prev_state, last_ply)
                     else:
                         last_loss = max(0.0, last_result.score - last_score)
                         last_label = _classify_move_loss(last_loss, thresholds)
@@ -531,6 +572,7 @@ def render_analysis_panel(state: GameState) -> None:
                             "Last move: %s (score %.2f, loss %.2f, %s)"
                             % (_format_ply(last_ply), last_score, last_loss, last_label)
                         )
+                        _render_tactic_hints(prev_state, last_ply)
 
 
 def main() -> None:
