@@ -8,9 +8,13 @@ from mill.analysis import tactic_hints_for_ply
 from engine.types import Ply
 
 
-def _state_with_board(board_vals, to_move: Stone = Stone.WHITE, 
-                      in_hand_white: int = 0, in_hand_black: int = 0,
-                      pending_remove: bool = False) -> GameState:
+def _state_with_board(
+    board_vals, 
+    to_move: Stone = Stone.WHITE, 
+    in_hand_white: int = 0, 
+    in_hand_black: int = 0,
+    pending_remove: bool = False
+) -> GameState:
     """Hilfsfunktion zum Erstellen eines GameState mit spezifischem Board."""
     base = GameState.initial()
     return replace(
