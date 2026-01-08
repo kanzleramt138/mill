@@ -315,4 +315,4 @@ def _best_breakdown(scored_raw: List[Tuple[Ply, float, List[Ply], EvalBreakdown]
 
 def _diff_breakdowns(best: EvalBreakdown, other: EvalBreakdown) -> EvalBreakdown:
     keys = set(best) | set(other)
-    return {key: float(best.get(key, 0.0)) - float(other.get(key, 0.0)) for key in keys}
+    return {key: best.get(key, 0.0) - other.get(key, 0.0) for key in keys}

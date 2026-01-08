@@ -28,8 +28,7 @@ from mill.analysis import (
     scored_actions_for_to_move,
     evaluate_light,
 )
-from engine import analyze, AnalysisResult, EvalWeights, Limits
-from engine.analysis_helpers import classify_move_loss
+from engine import analyze, AnalysisResult, EvalWeights, Limits, classify_move_loss
 from engine.movegen import apply_ply, legal_plies
 from mill.rules import position_key_from_state
 
