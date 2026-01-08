@@ -16,6 +16,9 @@ class Limits:
     time_ms: Optional[int] = None
     max_depth: Optional[int] = None
     max_nodes: Optional[int] = None
+    use_tt: Optional[bool] = None
+    top_n: Optional[int] = None
+    eval_weights: Optional["EvalWeights"] = None
 
 class EvalBreakdown(TypedDict, total=False):
     material: float
@@ -31,5 +34,25 @@ class AnalysisResult:
     score: float
     depth: int
     nodes: int
+    tt_hits: int
+    tt_misses: int
     pv: List[Ply]
+    top_moves: List["ScoredMove"]
     breakdown: EvalBreakdown
+
+
+@dataclass(frozen=True)
+class ScoredMove:
+    ply: Ply
+    score: float
+    pv: List[Ply]
+
+
+@dataclass(frozen=True)
+class EvalWeights:
+    material: float = 10.0
+    mills: float = 5.0
+    open_mills: float = 2.0
+    mobility: float = 1.0
+    threats_mill_in_1: float = 2.0
+    blocked_opponent: float = 0.5

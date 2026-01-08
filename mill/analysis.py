@@ -149,12 +149,17 @@ def mobility_profile(state: GameState, player: Stone) -> Dict[str, float]:
     total_moves = mobility_score(state, player)
     blocked = len(blocked_stones(state, player))
     avg = (total_moves / stones) if stones > 0 else 0.0
+    movable = stones - blocked if stones > 0 else 0
+    blocked_ratio = (blocked / stones) if stones > 0 else 0.0
     return {
         "stones": float(stones),
         "total_stones": float(stones),  # legacy key for compatibility
+        "movable_count": float(movable),
         "blocked": float(blocked),
+        "blocked_ratio": float(blocked_ratio),
         "total_moves": float(total_moves),
         "avg_moves": float(avg),
+        "avg_mobility": float(avg),
     }
 
 

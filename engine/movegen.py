@@ -36,6 +36,11 @@ def apply_ply(state: GameState, ply: Ply) -> GameState:
     """Wendet einen Composite-Ply an und liefert den Folgestatus ohne pending_remove."""
     player = state.to_move
 
+    if ply.kind == "fly":
+        phase = phase_for(state, player)
+        if phase != "flying":
+            raise ValueError("Fly-Ply ist nur in der Flying-Phase erlaubt")
+
     if state.pending_remove:
         if ply.kind != "remove" or ply.remove is None:
             raise ValueError("State verlangt Remove; ply.kind muss 'remove' sein")
@@ -81,6 +86,8 @@ def _plies_for_placement(state: GameState, player: Stone, dst: int | None) -> Li
 
     victim_state = replace(state, board=tuple(board))
     removables = removable_positions(victim_state, opponent(player))
+    if not removables:
+        return [Ply(kind="place", dst=dst)]
     return [Ply(kind="place", dst=dst, remove=r) for r in removables]
 
 
@@ -98,4 +105,6 @@ def _plies_for_move(state: GameState, player: Stone, move_kind: MoveKind, src: i
 
     victim_state = replace(state, board=tuple(board))
     removables = removable_positions(victim_state, opponent(player))
+    if not removables:
+        return [Ply(kind=move_kind, src=src, dst=dst)]
     return [Ply(kind=move_kind, src=src, dst=dst, remove=r) for r in removables]
