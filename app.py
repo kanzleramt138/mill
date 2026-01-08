@@ -29,6 +29,7 @@ from mill.analysis import (
     evaluate_light,
 )
 from engine import analyze, AnalysisResult, EvalWeights, Limits
+from engine.movegen import apply_ply, legal_plies
 from mill.rules import position_key_from_state
 
 
@@ -287,6 +288,21 @@ def sidebar_controls() -> None:
     st.sidebar.number_input("Threats (Mill-in-1)", min_value=0.0, max_value=10.0, step=0.5, key="w_threats_mill_in_1")
     st.sidebar.number_input("Blocked Opponent", min_value=0.0, max_value=10.0, step=0.5, key="w_blocked_opponent")
 
+    st.sidebar.subheader("Why Panel")
+    if "class_best_max" not in st.session_state:
+        st.session_state.class_best_max = 0.05
+    if "class_good_max" not in st.session_state:
+        st.session_state.class_good_max = 0.5
+    if "class_inaccuracy_max" not in st.session_state:
+        st.session_state.class_inaccuracy_max = 1.5
+    if "class_mistake_max" not in st.session_state:
+        st.session_state.class_mistake_max = 3.0
+
+    st.sidebar.number_input("Best <= loss", min_value=0.0, max_value=5.0, step=0.05, key="class_best_max")
+    st.sidebar.number_input("Good <= loss", min_value=0.0, max_value=5.0, step=0.05, key="class_good_max")
+    st.sidebar.number_input("Inaccuracy <= loss", min_value=0.0, max_value=10.0, step=0.1, key="class_inaccuracy_max")
+    st.sidebar.number_input("Mistake <= loss", min_value=0.0, max_value=20.0, step=0.1, key="class_mistake_max")
+
 
 def _format_positions(positions: set[int]) -> str:
     if not positions:
@@ -307,6 +323,29 @@ def _format_ply(ply) -> str:
     if ply.remove is not None and ply.kind in ("place", "move", "fly"):
         return f"{base} | remove {pos_label(ply.remove)}"
     return base
+
+
+def _classify_move_loss(delta: float, thresholds: dict[str, float]) -> str:
+    """Classify a move by score loss vs. best move (lower is better)."""
+    if delta <= thresholds["best"]:
+        return "Best"
+    if delta <= thresholds["good"]:
+        return "Good"
+    if delta <= thresholds["inaccuracy"]:
+        return "Inaccuracy"
+    if delta <= thresholds["mistake"]:
+        return "Mistake"
+    return "Blunder"
+
+
+def _find_transition_ply(prev_state: GameState, next_state: GameState):
+    for ply in legal_plies(prev_state):
+        try:
+            if apply_ply(prev_state, ply) == next_state:
+                return ply
+        except ValueError:
+            continue
+    return None
 
 
 def _format_pv(pv, *, per_line: int = 4) -> str:
@@ -433,6 +472,16 @@ def render_analysis_panel(state: GameState) -> None:
                 f"Depth={result.depth}, Nodes={result.nodes}, "
                 f"TT hits/misses={result.tt_hits}/{result.tt_misses}"
             )
+            best_threshold = max(0.0, float(st.session_state.get("class_best_max", 0.05)))
+            good_threshold = max(best_threshold, float(st.session_state.get("class_good_max", 0.5)))
+            inaccuracy_threshold = max(good_threshold, float(st.session_state.get("class_inaccuracy_max", 1.5)))
+            mistake_threshold = max(inaccuracy_threshold, float(st.session_state.get("class_mistake_max", 3.0)))
+            thresholds = {
+                "best": best_threshold,
+                "good": good_threshold,
+                "inaccuracy": inaccuracy_threshold,
+                "mistake": mistake_threshold,
+            }
             if result.best_move is not None:
                 st.write(f"Best move: {_format_ply(result.best_move)} (score {result.score:.2f})")
             if result.pv:
@@ -444,10 +493,44 @@ def render_analysis_panel(state: GameState) -> None:
                     st.write(f"  {k}: {v:.2f}")
             if result.top_moves:
                 st.write("Top moves:")
+                best_score = result.score
                 for sm in result.top_moves:
-                    st.write(f"{_format_ply(sm.ply)}: {sm.score:.2f}")
+                    loss = max(0.0, best_score - sm.score)
+                    label = _classify_move_loss(loss, thresholds)
+                    st.write("%s: %.2f (loss %.2f, %s)" % (_format_ply(sm.ply), sm.score, loss, label))
                     if sm.pv:
                         st.code(_format_pv(sm.pv), language="text")
+
+            hist: History | None = getattr(st.session_state, "state_history", None)
+            if hist is not None and hist.past:
+                prev_state = hist.past[-1]
+                last_ply = _find_transition_ply(prev_state, state)
+                if last_ply is not None:
+                    last_result = analyze(
+                        prev_state,
+                        limits=Limits(
+                            max_depth=depth,
+                            time_ms=time_ms,
+                            top_n=top_n,
+                            use_tt=use_tt,
+                            eval_weights=weights,
+                        ),
+                        for_player=prev_state.to_move,
+                    )
+                    last_score = None
+                    for sm in last_result.top_moves:
+                        if sm.ply == last_ply:
+                            last_score = sm.score
+                            break
+                    if last_score is None:
+                        st.write(f"Last move: {_format_ply(last_ply)} (not in Top-N)")
+                    else:
+                        last_loss = max(0.0, last_result.score - last_score)
+                        last_label = _classify_move_loss(last_loss, thresholds)
+                        st.write(
+                            "Last move: %s (score %.2f, loss %.2f, %s)"
+                            % (_format_ply(last_ply), last_score, last_loss, last_label)
+                        )
 
 
 def main() -> None:
