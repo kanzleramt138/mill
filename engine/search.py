@@ -6,7 +6,7 @@ from typing import Dict, List, Optional, Tuple, Literal
 
 from mill.graph import MILLS
 from mill.rules import draw_reason, forms_mill_after_placement, winner
-from mill.rules import position_key_from_state
+from mill.rules import position_key_from_state, position_key_with_symmetry
 from mill.state import GameState, Stone
 
 from .eval import evaluate
@@ -36,6 +36,7 @@ class _TTEntry:
     score: float
     flag: Literal["exact", "lower", "upper"]
     best_ply: Ply | None
+    score_only: bool = False
 
 
 def analyze(state: GameState, limits: Limits | None = None, for_player: Stone | None = None) -> AnalysisResult:
@@ -182,26 +183,36 @@ def _negamax(
         return color * eval_score, [], False
 
     key = position_key_from_state(state)
+    sym_key = position_key_with_symmetry(state)
+    tt_entry = None
+    tt_hit_was_symmetric = False
     if ctx.tt is not None:
         tt_entry = ctx.tt.get(key)
+        if tt_entry is None and sym_key != key:
+            tt_entry = ctx.tt.get(sym_key)
+            if tt_entry is not None:
+                tt_hit_was_symmetric = True
         if tt_entry is None:
             ctx.tt_misses += 1
         else:
             ctx.tt_hits += 1
-    else:
-        tt_entry = None
     if tt_entry is not None and tt_entry.depth >= depth:
+        pv = []
+        # Suppress best_ply if the hit came from a symmetric key
+        if not tt_entry.score_only and tt_entry.best_ply is not None and not tt_hit_was_symmetric:
+            pv = [tt_entry.best_ply]
         if tt_entry.flag == "exact":
-            pv = [tt_entry.best_ply] if tt_entry.best_ply is not None else []
             return tt_entry.score, pv, False
         if tt_entry.flag == "lower" and tt_entry.score >= beta:
-            pv = [tt_entry.best_ply] if tt_entry.best_ply is not None else []
             return tt_entry.score, pv, False
         if tt_entry.flag == "upper" and tt_entry.score <= alpha:
-            pv = [tt_entry.best_ply] if tt_entry.best_ply is not None else []
             return tt_entry.score, pv, False
 
-    plies = _order_plies(state, legal_plies(state), root_hint or (tt_entry.best_ply if tt_entry else None))
+    # Suppress best_ply for move ordering if the hit came from a symmetric key
+    tt_best = None
+    if tt_entry and not tt_hit_was_symmetric:
+        tt_best = tt_entry.best_ply
+    plies = _order_plies(state, legal_plies(state), root_hint or tt_best)
     if not plies:
         eval_score, _ = evaluate(state, ctx.for_player, ctx.eval_weights)
         return color * eval_score, [], False
@@ -230,12 +241,25 @@ def _negamax(
             flag = "lower"
         else:
             flag = "exact"
-        ctx.tt[key] = _TTEntry(
+        entry = _TTEntry(
             depth=depth,
             score=best_score,
             flag=flag,
             best_ply=best_pv[0] if best_pv else None,
         )
+        _store_tt_entry(ctx.tt, key, entry)
+        if sym_key != key:
+            _store_tt_entry(
+                ctx.tt,
+                sym_key,
+                _TTEntry(
+                    depth=depth,
+                    score=best_score,
+                    flag=flag,
+                    best_ply=None,
+                    score_only=True,
+                ),
+            )
 
     return best_score, best_pv, False
 
@@ -247,6 +271,12 @@ def _terminal_score(state: GameState, for_player: Stone) -> float | None:
     if w is None:
         return None
     return MATE_SCORE if w == for_player else -MATE_SCORE
+
+
+def _store_tt_entry(tt: Dict[int, "_TTEntry"], key: int, entry: "_TTEntry") -> None:
+    existing = tt.get(key)
+    if existing is None or entry.depth >= existing.depth:
+        tt[key] = entry
 
 
 def _order_plies(state: GameState, plies: List[Ply], tt_best: Ply | None) -> List[Ply]:

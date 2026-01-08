@@ -1,13 +1,14 @@
 # mill/graph.py
 from __future__ import annotations
 
-from typing import Dict, List, Tuple
+from typing import Callable, Dict, List, Tuple
 
 
 __all__ = [
     "MILLS",
     "NEIGHBORS",
     "GRID_7x7",
+    "SYMMETRY_MAPS",
 ]
 
 
@@ -71,3 +72,69 @@ MILLS: List[Tuple[int, int, int]] = [
     (5, 13, 20),
     (2, 14, 23),
 ]
+
+_GRID_SIZE = 7
+_INDEX_TO_COORD: Dict[int, Tuple[int, int]] = {}
+_COORD_TO_INDEX: Dict[Tuple[int, int], int] = {}
+for _row_idx, _row in enumerate(GRID_7x7):
+    for _col_idx, _pos in enumerate(_row):
+        if _pos is None:
+            continue
+        _INDEX_TO_COORD[_pos] = (_row_idx, _col_idx)
+        _COORD_TO_INDEX[(_row_idx, _col_idx)] = _pos
+
+
+def _identity(r: int, c: int) -> Tuple[int, int]:
+    return (r, c)
+
+
+def _rot90(r: int, c: int) -> Tuple[int, int]:
+    return (c, _GRID_SIZE - 1 - r)
+
+
+def _rot180(r: int, c: int) -> Tuple[int, int]:
+    return (_GRID_SIZE - 1 - r, _GRID_SIZE - 1 - c)
+
+
+def _rot270(r: int, c: int) -> Tuple[int, int]:
+    return (_GRID_SIZE - 1 - c, r)
+
+
+def _reflect(r: int, c: int) -> Tuple[int, int]:
+    return (r, _GRID_SIZE - 1 - c)
+
+
+def _compose(
+    first: Callable[[int, int], Tuple[int, int]],
+    second: Callable[[int, int], Tuple[int, int]],
+) -> Callable[[int, int], Tuple[int, int]]:
+    def _composed(r: int, c: int) -> Tuple[int, int]:
+        r2, c2 = first(r, c)
+        return second(r2, c2)
+
+    return _composed
+
+
+def _build_symmetry_maps() -> List[Tuple[int, ...]]:
+    transforms = [
+        _identity,
+        _rot90,
+        _rot180,
+        _rot270,
+        _reflect,
+        _compose(_reflect, _rot90),
+        _compose(_reflect, _rot180),
+        _compose(_reflect, _rot270),
+    ]
+    maps: List[Tuple[int, ...]] = []
+    for transform in transforms:
+        mapping: List[int] = [0] * 24
+        for idx, (r, c) in _INDEX_TO_COORD.items():
+            r2, c2 = transform(r, c)
+            mapped = _COORD_TO_INDEX[(r2, c2)]
+            mapping[idx] = mapped
+        maps.append(tuple(mapping))
+    return maps
+
+
+SYMMETRY_MAPS: List[Tuple[int, ...]] = _build_symmetry_maps()
