@@ -79,7 +79,7 @@ def test_compute_threat_squares_no_fallback_returns_empty_when_player_has_no_thr
     a, b, c = MILLS[0]
     board[a] = Stone.BLACK
     board[b] = Stone.BLACK
-    # c bleibt leer → offene Mühle für BLACK
+    # Position c remains empty → creates open mill threat for BLACK
 
     state = _state_with_board(board, to_move=Stone.WHITE)
 
@@ -265,7 +265,7 @@ def test_evaluate_light_correctly_handles_one_sided_threats() -> None:
     a, b, c = MILLS[0]  # First mill (0, 1, 2)
     board[a] = Stone.BLACK
     board[b] = Stone.BLACK
-    # c bleibt leer → offene Mühle für BLACK
+    # Position c remains empty → BLACK has open mill threat, WHITE has no threats
     
     # Give WHITE a stone somewhere else (not threatening a mill)
     board[10] = Stone.WHITE
