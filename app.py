@@ -363,7 +363,9 @@ def _format_pv_sentence(pv) -> str:
         return "-"
     steps = [_format_ply(p) for p in pv]
     if len(steps) == 1:
-        return f"Wenn du {steps[0]}."
+        # Bei genau einem Schritt keinen grammatikalisch unvollständigen Konditionalsatz verwenden.
+        # Statt "Wenn du Place a7." nur "Place a7." ausgeben.
+        return f"{steps[0]}."
     return "Wenn du " + ", dann ".join(steps) + "."
 
 
