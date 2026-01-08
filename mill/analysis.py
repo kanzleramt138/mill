@@ -203,6 +203,36 @@ def scored_actions_for_to_move(
 
 
 def _apply_ply_for_analysis(state: GameState, ply: "Ply") -> GameState:
+    """
+    Wendet ein einzelnes Ply („Zug inkl. optionalem Remove“) auf einen GameState an
+    – speziell für Analyse-/Training-Kontexte.
+
+    Diese Hilfsfunktion bildet die Engine-Logik zum Anwenden eines Ply nach, bleibt
+    aber bewusst leichtgewichtig und side-effect-frei: Sie arbeitet rein auf dem
+    übergebenen `state` und gibt einen neuen `GameState` zurück, ohne weitere
+    Engine-Strukturen (History, Suche, UI) zu berühren.
+
+    Sie validiert dabei:
+    - Konsistenz von `ply.kind` mit dem aktuellen Zustand (`pending_remove`,
+      Phase „flying“ vs. `ply.kind == "fly"`).
+    - Vollständigkeit der Felder (`src`, `dst`, `remove`) je nach Ply-Typ.
+    - Korrektes Entfernen nach geschlossener Mühle mittels
+      :func:`removable_positions`.
+
+    Im Fehlerfall wird ein :class:`ValueError` geworfen (z. B. Remove ohne
+    geschlossene Mühle oder fehlendes Remove trotz `pending_remove`).
+
+    Unterschiede zu :func:`engine.movegen.apply_ply`:
+    - lebt im Analyse-Modul und ist unabhängig von der eigentlichen Engine-
+      Verkabelung.
+    - verwendet direkt :func:`apply_action` auf Domänenebene und ist damit
+      gut für Evaluierung, Taktik-Hints und Tests geeignet.
+
+    :param state: aktueller Spielzustand, auf den das Ply angewendet werden soll.
+    :param ply:   zu simulierendes Ply (typischerweise aus dem Engine-/Frontend-
+                   Kontext), das bereits grob legal sein sollte.
+    :return: neuer :class:`GameState` nach Anwendung des Plys.
+    """
     player = state.to_move
 
     if state.pending_remove:
