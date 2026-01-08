@@ -100,3 +100,77 @@ def test_apply_ply_raises_when_remove_missing_on_mill() -> None:
 
     with pytest.raises(ValueError):
         apply_ply(state, ply)
+
+
+def test_legal_plies_flying_uses_fly_kind() -> None:
+    board = [Stone.EMPTY] * 24
+    board[0] = Stone.WHITE
+    board[5] = Stone.WHITE
+    board[6] = Stone.WHITE
+    board[3] = Stone.BLACK
+    board[12] = Stone.BLACK
+    board[15] = Stone.BLACK
+
+    state = GameState(
+        board=tuple(board),
+        to_move=Stone.WHITE,
+        in_hand_white=0,
+        in_hand_black=0,
+        pending_remove=False,
+        turn_no=10,
+    )
+
+    plies = legal_plies(state)
+
+    assert plies
+    assert all(p.kind == "fly" for p in plies)
+
+
+def test_apply_ply_allows_move_kind_in_flying() -> None:
+    board = [Stone.EMPTY] * 24
+    board[0] = Stone.WHITE
+    board[5] = Stone.WHITE
+    board[6] = Stone.WHITE
+    board[3] = Stone.BLACK
+    board[12] = Stone.BLACK
+    board[15] = Stone.BLACK
+
+    state = GameState(
+        board=tuple(board),
+        to_move=Stone.WHITE,
+        in_hand_white=0,
+        in_hand_black=0,
+        pending_remove=False,
+        turn_no=10,
+    )
+
+    ply = Ply(kind="move", src=0, dst=1)
+    nxt = apply_ply(state, ply)
+
+    assert nxt.board[0] == Stone.EMPTY
+    assert nxt.board[1] == Stone.WHITE
+
+
+def test_apply_ply_rejects_fly_outside_flying() -> None:
+    board = [Stone.EMPTY] * 24
+    board[0] = Stone.WHITE
+    board[5] = Stone.WHITE
+    board[6] = Stone.WHITE
+    board[9] = Stone.WHITE
+    board[3] = Stone.BLACK
+    board[12] = Stone.BLACK
+    board[15] = Stone.BLACK
+
+    state = GameState(
+        board=tuple(board),
+        to_move=Stone.WHITE,
+        in_hand_white=0,
+        in_hand_black=0,
+        pending_remove=False,
+        turn_no=11,
+    )
+
+    ply = Ply(kind="fly", src=0, dst=1)
+
+    with pytest.raises(ValueError):
+        apply_ply(state, ply)
