@@ -358,6 +358,26 @@ def _format_pv(pv, *, per_line: int = 4) -> str:
     return "\n".join(chunks)
 
 
+def _format_breakdown(
+    breakdown: dict[str, float],
+    *,
+    only_non_zero: bool = False,
+    signed: bool = False,
+) -> str:
+    if not breakdown:
+        return "-"
+    items = []
+    for key in sorted(breakdown.keys()):
+        value = breakdown[key]
+        if only_non_zero and abs(value) < 1e-9:
+            continue
+        if signed:
+            items.append(f"{key}: {value:+.2f}")
+        else:
+            items.append(f"{key}: {value:.2f}")
+    return ", ".join(items) if items else "-"
+
+
 def render_analysis_panel(state: GameState) -> None:
     """Seitliches Analyse-Panel (read-only)."""
     import streamlit as st  # lokal halten
@@ -498,6 +518,12 @@ def render_analysis_panel(state: GameState) -> None:
                     loss = max(0.0, best_score - sm.score)
                     label = _classify_move_loss(loss, thresholds)
                     st.write("%s: %.2f (loss %.2f, %s)" % (_format_ply(sm.ply), sm.score, loss, label))
+                    if sm.breakdown:
+                        st.write(f"  Breakdown: {_format_breakdown(sm.breakdown)}")
+                    if sm.breakdown_diff:
+                        diff_line = _format_breakdown(sm.breakdown_diff, only_non_zero=True, signed=True)
+                        if diff_line != "-":
+                            st.write(f"  Δ zum Best-Move: {diff_line}")
                     if sm.pv:
                         st.code(_format_pv(sm.pv), language="text")
 
