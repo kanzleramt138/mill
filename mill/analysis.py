@@ -248,18 +248,18 @@ def _apply_ply_for_analysis(state: GameState, ply: "Ply") -> GameState:
 
     if ply.kind == "place":
         if ply.dst is None:
-            raise ValueError("Place-Ply benoetigt dst")
+            raise ValueError("Place-Ply benötigt dst")
         mid = apply_action(state, Action(kind="place", dst=ply.dst))
     else:
         if ply.src is None or ply.dst is None:
-            raise ValueError("Move/Fly-Ply benoetigt src und dst")
+            raise ValueError("Move/Fly-Ply benötigt src und dst")
         mid = apply_action(state, Action(kind="move", src=ply.src, dst=ply.dst))
 
     if mid.pending_remove:
         if ply.remove is None:
             removables = removable_positions(mid, opponent(player))
             if removables:
-                raise ValueError("Ply muss Remove enthalten, da eine Muehle geschlossen wurde")
+                raise ValueError("Ply muss Remove enthalten, da eine Mühle geschlossen wurde")
             return replace(mid, pending_remove=False)
         return apply_action(mid, Action(kind="remove", dst=ply.remove))
 
