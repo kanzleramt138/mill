@@ -114,6 +114,57 @@ def best_move(state: GameState, limits: Limits | None = None, for_player: Stone 
     return result.best_move
 
 
+def score_ply(
+    state: GameState,
+    ply: Ply,
+    limits: Limits | None = None,
+    for_player: Stone | None = None,
+) -> Tuple[float, List[Ply]]:
+    """
+    Bewertet einen vorgegebenen Halbzug: Ply anwenden, dann Suche mit depth-1.
+    Score ist aus Sicht von for_player.
+    """
+    if not _is_valid_state(state):
+        return 0.0, []
+
+    if limits is None:
+        limits = Limits()
+
+    max_depth = limits.max_depth or 1
+    depth = max(0, max_depth - 1)
+    for_player = for_player or state.to_move
+    deadline = (
+        time.perf_counter() + (limits.time_ms / 1000.0)
+        if limits.time_ms
+        else None
+    )
+    use_tt = True if limits.use_tt is None else limits.use_tt
+    eval_weights = limits.eval_weights or EvalWeights()
+
+    ctx = _SearchContext(
+        for_player=for_player,
+        deadline=deadline,
+        max_nodes=limits.max_nodes,
+        tt={} if use_tt else None,
+        eval_weights=eval_weights,
+    )
+
+    nxt = apply_ply(state, ply)
+    color = 1.0 if state.to_move == for_player else -1.0
+    score, child_pv, stopped = _negamax(
+        nxt,
+        depth,
+        float("-inf"),
+        float("inf"),
+        -color,
+        ctx,
+    )
+    if stopped:
+        return 0.0, []
+    score = -score
+    return score, [ply] + child_pv
+
+
 def _negamax_root(
     state: GameState,
     depth: int,
@@ -130,17 +181,33 @@ def _negamax_root(
     scored: List[ScoredMove] = []
     for ply in plies:
         nxt = apply_ply(state, ply)
+        _, breakdown = evaluate(nxt, ctx.for_player, ctx.eval_weights)
         score, child_pv, stopped = _negamax(nxt, depth - 1, -beta, -alpha, -color, ctx)
         if stopped:
             return best_score, best_pv, scored, True
         score = -score
-        scored.append(ScoredMove(ply=ply, score=score, pv=[ply] + child_pv))
+        scored.append(ScoredMove(ply=ply, score=score, pv=[ply] + child_pv, breakdown=breakdown))
         if score > best_score:
             best_score = score
             best_pv = [ply] + child_pv
         if score > alpha:
             alpha = score
     scored.sort(key=lambda s: s.score, reverse=True)
+    if scored:
+        best_breakdown = scored[0].breakdown
+        scored = [
+            ScoredMove(
+                ply=sm.ply,
+                score=sm.score,
+                pv=sm.pv,
+                breakdown=sm.breakdown,
+                breakdown_diff={
+                    key: sm.breakdown.get(key, 0.0) - best_breakdown.get(key, 0.0)
+                    for key in set(best_breakdown.keys()) | set(sm.breakdown.keys())
+                },
+            )
+            for sm in scored
+        ]
     return best_score, best_pv, scored[:top_n], False
 
 

@@ -29,7 +29,7 @@ from mill.analysis import (
     evaluate_light,
     tactic_hints_for_ply,
 )
-from engine import analyze, AnalysisResult, EvalWeights, Limits
+from engine import analyze, AnalysisResult, EvalWeights, Limits, score_ply
 from engine.movegen import apply_ply, legal_plies
 from mill.rules import position_key_from_state
 
@@ -396,6 +396,26 @@ def _format_pv(pv, *, per_line: int = 4) -> str:
     return "\n".join(chunks)
 
 
+def _format_breakdown(
+    breakdown: dict[str, float],
+    *,
+    only_non_zero: bool = False,
+    signed: bool = False,
+) -> str:
+    if not breakdown:
+        return "-"
+    items = []
+    for key in sorted(breakdown.keys()):
+        value = breakdown[key]
+        if only_non_zero and abs(value) < 1e-9:
+            continue
+        if signed:
+            items.append(f"{key}: {value:+.2f}")
+        else:
+            items.append(f"{key}: {value:.2f}")
+    return ", ".join(items) if items else "-"
+
+
 def render_analysis_panel(state: GameState) -> None:
     """Seitliches Analyse-Panel (read-only)."""
     import streamlit as st  # lokal halten
@@ -537,7 +557,12 @@ def render_analysis_panel(state: GameState) -> None:
                     loss = max(0.0, best_score - sm.score)
                     label = _classify_move_loss(loss, thresholds)
                     st.write("%s: %.2f (loss %.2f, %s)" % (_format_ply(sm.ply), sm.score, loss, label))
-                    _render_tactic_hints(state, sm.ply)
+                    if sm.breakdown:
+                        st.write(f"  Breakdown: {_format_breakdown(sm.breakdown)}")
+                    if sm.breakdown_diff:
+                        diff_line = _format_breakdown(sm.breakdown_diff, only_non_zero=True, signed=True)
+                        if diff_line != "-":
+                            st.write(f"  Δ zum Best-Move: {diff_line}")
                     if sm.pv:
                         st.code(_format_pv(sm.pv), language="text")
 
@@ -546,33 +571,42 @@ def render_analysis_panel(state: GameState) -> None:
                 prev_state = hist.past[-1]
                 last_ply = _find_transition_ply(prev_state, state)
                 if last_ply is not None:
+                    last_limits = Limits(
+                        max_depth=depth,
+                        time_ms=time_ms,
+                        top_n=top_n,
+                        use_tt=use_tt,
+                        eval_weights=weights,
+                    )
                     last_result = analyze(
                         prev_state,
-                        limits=Limits(
-                            max_depth=depth,
-                            time_ms=time_ms,
-                            top_n=top_n,
-                            use_tt=use_tt,
-                            eval_weights=weights,
-                        ),
+                        limits=last_limits,
                         for_player=prev_state.to_move,
                     )
                     last_score = None
+                    last_pv = None
                     for sm in last_result.top_moves:
                         if sm.ply == last_ply:
                             last_score = sm.score
+                            last_pv = sm.pv
                             break
+                    not_in_top_n = last_score is None
                     if last_score is None:
-                        st.write(f"Last move: {_format_ply(last_ply)} (not in Top-N)")
-                        _render_tactic_hints(prev_state, last_ply)
-                    else:
-                        last_loss = max(0.0, last_result.score - last_score)
-                        last_label = _classify_move_loss(last_loss, thresholds)
-                        st.write(
-                            "Last move: %s (score %.2f, loss %.2f, %s)"
-                            % (_format_ply(last_ply), last_score, last_loss, last_label)
+                        last_score, last_pv = score_ply(
+                            prev_state,
+                            last_ply,
+                            limits=last_limits,
+                            for_player=prev_state.to_move,
                         )
-                        _render_tactic_hints(prev_state, last_ply)
+                    last_loss = max(0.0, last_result.score - last_score)
+                    last_label = _classify_move_loss(last_loss, thresholds)
+                    suffix = " (not in Top-N)" if not_in_top_n else ""
+                    st.write(
+                        "Last move: %s (score %.2f, loss %.2f, %s)%s"
+                        % (_format_ply(last_ply), last_score, last_loss, last_label, suffix)
+                    )
+                    if last_pv:
+                        st.code(_format_pv(last_pv), language="text")
 
 
 def main() -> None:
