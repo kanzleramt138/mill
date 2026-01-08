@@ -29,6 +29,7 @@ from mill.analysis import (
     evaluate_light,
     tactic_hints_for_ply,
 )
+
 from engine import analyze, AnalysisResult, EvalWeights, Limits, score_ply
 from engine.movegen import apply_ply, legal_plies
 from mill.rules import position_key_from_state
@@ -70,6 +71,8 @@ def render_svg_board_interactive(state: GameState) -> None:
     )
 
     # Threat-Overlay: Drohfelder des Gegners von to_move
+    # Note: uses default fallback=True for defensive overlay - if opponent has no threats,
+    # shows player's own threats for awareness
     threat_targets: set[int] = set()
     if st.session_state.get("threat_overlay", False) and not game_finished:
         threat_targets = compute_threat_squares(state, opponent(state.to_move))
@@ -396,6 +399,17 @@ def _format_pv(pv, *, per_line: int = 4) -> str:
     return "\n".join(chunks)
 
 
+def _format_pv_sentence(pv) -> str:
+    if not pv:
+        return "-"
+    steps = [_format_ply(p) for p in pv]
+    if len(steps) == 1:
+        # Bei genau einem Schritt keinen grammatikalisch unvollständigen Konditionalsatz verwenden.
+        # Statt "Wenn du Place a7." nur "Place a7." ausgeben.
+        return f"{steps[0]}."
+    return "Wenn du " + ", dann ".join(steps) + "."
+  
+
 def _format_breakdown(
     breakdown: dict[str, float],
     *,
@@ -431,7 +445,7 @@ def render_analysis_panel(state: GameState) -> None:
         base_eval_black = evaluate_light(state, Stone.BLACK)
 
         for player in (Stone.WHITE, Stone.BLACK):
-            threats = compute_threat_squares(state, player)
+            threats = compute_threat_squares(state, player, use_fallback=False)
             mobility = mobility_score(state, player)
             blocked = blocked_stones(state, player)
             profile = mobility_profile(state, player)
@@ -609,6 +623,32 @@ def render_analysis_panel(state: GameState) -> None:
                     )
                     if last_pv:
                         st.code(_format_pv(last_pv), language="text")
+                    last_result = analyze(
+                        prev_state,
+                        limits=Limits(
+                            max_depth=depth,
+                            time_ms=time_ms,
+                            top_n=top_n,
+                            use_tt=use_tt,
+                            eval_weights=weights,
+                        ),
+                        for_player=prev_state.to_move,
+                    )
+                    last_score = None
+                    for sm in last_result.top_moves:
+                        if sm.ply == last_ply:
+                            last_score = sm.score
+                            break
+                    if last_score is None:
+                        st.write(f"Last move: {_format_ply(last_ply)} (not in Top-N)")
+                    else:
+                        last_loss = max(0.0, last_result.score - last_score)
+                        last_label = _classify_move_loss(last_loss, thresholds)
+                        st.write(
+                            "Last move: %s (score %.2f, loss %.2f, %s)"
+                            % (_format_ply(last_ply), last_score, last_loss, last_label)
+                        )
+
 
 
 def main() -> None:

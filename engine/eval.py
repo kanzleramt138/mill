@@ -27,7 +27,7 @@ def evaluate(state: GameState, player: Stone, weights: EvalWeights | None = None
     mills = _count_mills(state, player) - _count_mills(state, opp)
     open_mills = _count_open_mills(state, player) - _count_open_mills(state, opp)
     mob = mobility_score(state, player) - mobility_score(state, opp)
-    thr = len(compute_threat_squares(state, opp)) - len(compute_threat_squares(state, player))
+    thr = len(compute_threat_squares(state, opp, use_fallback=False)) - len(compute_threat_squares(state, player, use_fallback=False))
     blk = len(blocked_stones(state, opp)) - len(blocked_stones(state, player))
 
     breakdown: EvalBreakdown = {
