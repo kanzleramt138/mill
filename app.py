@@ -69,6 +69,8 @@ def render_svg_board_interactive(state: GameState) -> None:
     )
 
     # Threat-Overlay: Drohfelder des Gegners von to_move
+    # Note: uses default fallback=True for defensive overlay - if opponent has no threats,
+    # shows player's own threats for awareness
     threat_targets: set[int] = set()
     if st.session_state.get("threat_overlay", False) and not game_finished:
         threat_targets = compute_threat_squares(state, opponent(state.to_move))
@@ -373,7 +375,7 @@ def render_analysis_panel(state: GameState) -> None:
         base_eval_black = evaluate_light(state, Stone.BLACK)
 
         for player in (Stone.WHITE, Stone.BLACK):
-            threats = compute_threat_squares(state, player)
+            threats = compute_threat_squares(state, player, use_fallback=False)
             mobility = mobility_score(state, player)
             blocked = blocked_stones(state, player)
             profile = mobility_profile(state, player)
