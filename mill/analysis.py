@@ -31,10 +31,18 @@ def _effective_phase(state: GameState, player: Stone) -> Phase:
     return "moving"
 
 
-def compute_threat_squares(state: GameState, player: Stone) -> Set[int]:
+def compute_threat_squares(state: GameState, player: Stone, *, use_fallback: bool = True) -> Set[int]:
     """
     Felder, auf denen der `player` im nächsten Zug eine Mühle schließen kann
     (= offene Mühlen von `player`).
+    
+    Args:
+        state: Der aktuelle Spielzustand
+        player: Spieler, für den die Drohfelder berechnet werden
+        use_fallback: Wenn True und der Spieler hat keine Drohungen, werden die 
+                      Drohungen des Gegners zurückgegeben (für Defensive-Overlay).
+                      Wenn False, wird immer ein leeres Set zurückgegeben, wenn der 
+                      Spieler keine Drohungen hat (für Mill-in-1-Analyse).
     """
     board = state.board
     empties = set(_empty_positions(board))
@@ -73,7 +81,7 @@ def compute_threat_squares(state: GameState, player: Stone) -> Set[int]:
         return res
     
     threatened = _threats_for(player)
-    if not threatened:
+    if not threatened and use_fallback:
         # Fallback: auch Gegner prüfen (für Defensive-Overlay/Tests)
         threatened = _threats_for(opponent(player))
     return threatened
@@ -175,7 +183,7 @@ def evaluate_light(state: GameState, player: Stone) -> float:
 
     mat = _count_on_board(state.board, player) - _count_on_board(state.board, opp)
     mob = mobility_score(state, player) - mobility_score(state, opp)
-    thr = len(compute_threat_squares(state, opp)) - len(compute_threat_squares(state, player))
+    thr = len(compute_threat_squares(state, opp, use_fallback=False)) - len(compute_threat_squares(state, player, use_fallback=False))
     return w_mat * mat + w_mob * mob + w_thr * thr
 
 

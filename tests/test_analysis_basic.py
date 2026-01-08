@@ -26,7 +26,7 @@ def _state(board: list[Stone], to_move: Stone = Stone.WHITE) -> GameState:
 
 def test_threat_squares_detect_simple_closure_place_phase() -> None:
     b = _empty_board()
-    # Gegner (BLACK) hat zwei Steine in einer Reihe (0,1,2), drittes Feld leer
+    # BLACK hat zwei Steine in einer Reihe (0,1,2), drittes Feld leer
     b[0] = Stone.BLACK
     b[1] = Stone.BLACK
     s = GameState(
@@ -37,8 +37,17 @@ def test_threat_squares_detect_simple_closure_place_phase() -> None:
         pending_remove=False,
         turn_no=0,
     )
-    threats_vs_white = compute_threat_squares(s, Stone.WHITE)
-    assert 2 in threats_vs_white
+    # Test BLACK's threats (not WHITE's - WHITE has no stones)
+    threats_black = compute_threat_squares(s, Stone.BLACK)
+    assert 2 in threats_black
+    
+    # Test that WHITE has no threats (without fallback)
+    threats_white_no_fallback = compute_threat_squares(s, Stone.WHITE, use_fallback=False)
+    assert len(threats_white_no_fallback) == 0
+    
+    # Test that WHITE threats with fallback returns BLACK's threats
+    threats_white_with_fallback = compute_threat_squares(s, Stone.WHITE, use_fallback=True)
+    assert 2 in threats_white_with_fallback
 
 def test_mobility_by_pos_moving_and_blocked() -> None:
     # WHITE moving mit einem Stein p, alle Nachbarn von p sind belegt → blocked
