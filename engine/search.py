@@ -172,17 +172,21 @@ def _negamax(
     key = position_key_from_state(state)
     sym_key = position_key_with_symmetry(state)
     tt_entry = None
+    tt_hit_was_symmetric = False
     if ctx.tt is not None:
         tt_entry = ctx.tt.get(key)
         if tt_entry is None and sym_key != key:
             tt_entry = ctx.tt.get(sym_key)
+            if tt_entry is not None:
+                tt_hit_was_symmetric = True
         if tt_entry is None:
             ctx.tt_misses += 1
         else:
             ctx.tt_hits += 1
     if tt_entry is not None and tt_entry.depth >= depth:
         pv = []
-        if not tt_entry.score_only and tt_entry.best_ply is not None:
+        # Suppress best_ply if the hit came from a symmetric key
+        if not tt_entry.score_only and tt_entry.best_ply is not None and not tt_hit_was_symmetric:
             pv = [tt_entry.best_ply]
         if tt_entry.flag == "exact":
             return tt_entry.score, pv, False
@@ -191,7 +195,11 @@ def _negamax(
         if tt_entry.flag == "upper" and tt_entry.score <= alpha:
             return tt_entry.score, pv, False
 
-    plies = _order_plies(state, legal_plies(state), root_hint or (tt_entry.best_ply if tt_entry else None))
+    # Suppress best_ply for move ordering if the hit came from a symmetric key
+    tt_best = None
+    if tt_entry and not tt_hit_was_symmetric:
+        tt_best = tt_entry.best_ply
+    plies = _order_plies(state, legal_plies(state), root_hint or tt_best)
     if not plies:
         eval_score, _ = evaluate(state, ctx.for_player, ctx.eval_weights)
         return color * eval_score, [], False
