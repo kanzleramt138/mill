@@ -114,6 +114,57 @@ def best_move(state: GameState, limits: Limits | None = None, for_player: Stone 
     return result.best_move
 
 
+def score_ply(
+    state: GameState,
+    ply: Ply,
+    limits: Limits | None = None,
+    for_player: Stone | None = None,
+) -> Tuple[float, List[Ply]]:
+    """
+    Bewertet einen vorgegebenen Halbzug: Ply anwenden, dann Suche mit depth-1.
+    Score ist aus Sicht von for_player.
+    """
+    if not _is_valid_state(state):
+        return 0.0, []
+
+    if limits is None:
+        limits = Limits()
+
+    max_depth = limits.max_depth or 1
+    depth = max(0, max_depth - 1)
+    for_player = for_player or state.to_move
+    deadline = (
+        time.perf_counter() + (limits.time_ms / 1000.0)
+        if limits.time_ms
+        else None
+    )
+    use_tt = True if limits.use_tt is None else limits.use_tt
+    eval_weights = limits.eval_weights or EvalWeights()
+
+    ctx = _SearchContext(
+        for_player=for_player,
+        deadline=deadline,
+        max_nodes=limits.max_nodes,
+        tt={} if use_tt else None,
+        eval_weights=eval_weights,
+    )
+
+    nxt = apply_ply(state, ply)
+    color = 1.0 if state.to_move == for_player else -1.0
+    score, child_pv, stopped = _negamax(
+        nxt,
+        depth,
+        float("-inf"),
+        float("inf"),
+        -color,
+        ctx,
+    )
+    if stopped:
+        return 0.0, []
+    score = -score
+    return score, [ply] + child_pv
+
+
 def _negamax_root(
     state: GameState,
     depth: int,

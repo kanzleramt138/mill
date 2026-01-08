@@ -28,7 +28,7 @@ from mill.analysis import (
     scored_actions_for_to_move,
     evaluate_light,
 )
-from engine import analyze, AnalysisResult, EvalWeights, Limits
+from engine import analyze, AnalysisResult, EvalWeights, Limits, score_ply
 from engine.movegen import apply_ply, legal_plies
 from mill.rules import position_key_from_state
 
@@ -532,31 +532,42 @@ def render_analysis_panel(state: GameState) -> None:
                 prev_state = hist.past[-1]
                 last_ply = _find_transition_ply(prev_state, state)
                 if last_ply is not None:
+                    last_limits = Limits(
+                        max_depth=depth,
+                        time_ms=time_ms,
+                        top_n=top_n,
+                        use_tt=use_tt,
+                        eval_weights=weights,
+                    )
                     last_result = analyze(
                         prev_state,
-                        limits=Limits(
-                            max_depth=depth,
-                            time_ms=time_ms,
-                            top_n=top_n,
-                            use_tt=use_tt,
-                            eval_weights=weights,
-                        ),
+                        limits=last_limits,
                         for_player=prev_state.to_move,
                     )
                     last_score = None
+                    last_pv = None
                     for sm in last_result.top_moves:
                         if sm.ply == last_ply:
                             last_score = sm.score
+                            last_pv = sm.pv
                             break
+                    not_in_top_n = last_score is None
                     if last_score is None:
-                        st.write(f"Last move: {_format_ply(last_ply)} (not in Top-N)")
-                    else:
-                        last_loss = max(0.0, last_result.score - last_score)
-                        last_label = _classify_move_loss(last_loss, thresholds)
-                        st.write(
-                            "Last move: %s (score %.2f, loss %.2f, %s)"
-                            % (_format_ply(last_ply), last_score, last_loss, last_label)
+                        last_score, last_pv = score_ply(
+                            prev_state,
+                            last_ply,
+                            limits=last_limits,
+                            for_player=prev_state.to_move,
                         )
+                    last_loss = max(0.0, last_result.score - last_score)
+                    last_label = _classify_move_loss(last_loss, thresholds)
+                    suffix = " (not in Top-N)" if not_in_top_n else ""
+                    st.write(
+                        "Last move: %s (score %.2f, loss %.2f, %s)%s"
+                        % (_format_ply(last_ply), last_score, last_loss, last_label, suffix)
+                    )
+                    if last_pv:
+                        st.code(_format_pv(last_pv), language="text")
 
 
 def main() -> None:
