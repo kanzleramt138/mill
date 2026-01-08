@@ -29,6 +29,7 @@ from mill.analysis import (
     evaluate_light,
 )
 from engine import analyze, AnalysisResult, EvalWeights, Limits
+from engine.analysis_helpers import classify_move_loss
 from engine.movegen import apply_ply, legal_plies
 from mill.rules import position_key_from_state
 
@@ -325,19 +326,6 @@ def _format_ply(ply) -> str:
     return base
 
 
-def _classify_move_loss(delta: float, thresholds: dict[str, float]) -> str:
-    """Classify a move by score loss vs. best move (lower is better)."""
-    if delta <= thresholds["best"]:
-        return "Best"
-    if delta <= thresholds["good"]:
-        return "Good"
-    if delta <= thresholds["inaccuracy"]:
-        return "Inaccuracy"
-    if delta <= thresholds["mistake"]:
-        return "Mistake"
-    return "Blunder"
-
-
 def _find_transition_ply(prev_state: GameState, next_state: GameState):
     for ply in legal_plies(prev_state):
         try:
@@ -496,7 +484,7 @@ def render_analysis_panel(state: GameState) -> None:
                 best_score = result.score
                 for sm in result.top_moves:
                     loss = max(0.0, best_score - sm.score)
-                    label = _classify_move_loss(loss, thresholds)
+                    label = classify_move_loss(loss, thresholds)
                     st.write("%s: %.2f (loss %.2f, %s)" % (_format_ply(sm.ply), sm.score, loss, label))
                     if sm.pv:
                         st.code(_format_pv(sm.pv), language="text")
@@ -526,7 +514,7 @@ def render_analysis_panel(state: GameState) -> None:
                         st.write(f"Last move: {_format_ply(last_ply)} (not in Top-N)")
                     else:
                         last_loss = max(0.0, last_result.score - last_score)
-                        last_label = _classify_move_loss(last_loss, thresholds)
+                        last_label = classify_move_loss(last_loss, thresholds)
                         st.write(
                             "Last move: %s (score %.2f, loss %.2f, %s)"
                             % (_format_ply(last_ply), last_score, last_loss, last_label)

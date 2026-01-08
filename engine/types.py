@@ -46,6 +46,8 @@ class ScoredMove:
     ply: Ply
     score: float
     pv: List[Ply]
+    breakdown: EvalBreakdown
+    breakdown_diff: EvalBreakdown
 
 
 @dataclass(frozen=True)

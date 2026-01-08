@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from engine import Ply, Limits, analyze, best_move
+from engine import Ply, Limits, analyze, best_move, classify_move_loss
 from engine.eval import evaluate
 from engine.movegen import legal_plies
 from engine.search import _order_plies
@@ -74,3 +74,50 @@ def test_analyze_returns_top_moves_with_pv() -> None:
     assert result.top_moves
     assert all(tm.ply in legal_plies(state) for tm in result.top_moves)
     assert all(tm.pv and tm.pv[0] == tm.ply for tm in result.top_moves)
+
+
+def test_classify_move_loss_thresholds() -> None:
+    thresholds = {
+        "best": 0.1,
+        "good": 0.5,
+        "inaccuracy": 1.0,
+        "mistake": 2.0,
+    }
+
+    assert classify_move_loss(0.0, thresholds) == "Best"
+    assert classify_move_loss(0.1, thresholds) == "Best"
+    assert classify_move_loss(0.4, thresholds) == "Good"
+    assert classify_move_loss(0.9, thresholds) == "Inaccuracy"
+    assert classify_move_loss(1.5, thresholds) == "Mistake"
+    assert classify_move_loss(2.5, thresholds) == "Blunder"
+
+
+def test_top_moves_breakdown_diff_matches_best_move() -> None:
+    board = [Stone.EMPTY] * 24
+    board[0] = Stone.WHITE
+    board[9] = Stone.BLACK
+
+    state = GameState(
+        board=tuple(board),
+        to_move=Stone.WHITE,
+        in_hand_white=8,
+        in_hand_black=8,
+        pending_remove=False,
+        turn_no=1,
+    )
+
+    result = analyze(
+        state,
+        limits=Limits(max_depth=1, top_n=3),
+        for_player=Stone.WHITE,
+    )
+
+    assert result.top_moves
+    best = result.top_moves[0]
+    assert best.breakdown
+    for sm in result.top_moves:
+        assert sm.breakdown
+        assert sm.breakdown_diff
+        for key, best_val in best.breakdown.items():
+            expected = best_val - sm.breakdown.get(key, 0.0)
+            assert sm.breakdown_diff.get(key, 0.0) == expected
