@@ -275,6 +275,9 @@ def tactic_hints_for_ply(state: GameState, ply: Ply) -> Dict[str, object]:
       - eröffnete Mill-in-1 Chance für den Gegner (nach dem Zug)
       - blockierte Steine beider Seiten (nach dem Zug)
     """
+    # Runtime import to avoid circular dependency
+    from engine.movegen import apply_ply
+    
     player = state.to_move
     opp = opponent(player)
 
@@ -290,7 +293,7 @@ def tactic_hints_for_ply(state: GameState, ply: Ply) -> Dict[str, object]:
     if ply.kind != "remove" and threats_before_self and used_threat_square is None:
         missed_mill_in_1 = True
 
-    next_state = _apply_ply_for_analysis(state, ply)
+    next_state = apply_ply(state, ply)
     threats_after_opp = compute_threat_squares(next_state, opp)
     new_opp_threats = threats_after_opp - threats_before_opp
 
