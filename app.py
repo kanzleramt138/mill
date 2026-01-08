@@ -545,6 +545,7 @@ def render_analysis_panel(state: GameState) -> None:
                 _render_tactic_hints(state, result.best_move)
             if result.pv:
                 st.write("PV:")
+                st.write(_format_pv_sentence(result.pv))
                 st.code(_format_pv(result.pv), language="text")
             if result.breakdown:
                 st.write("Eval breakdown:")
@@ -564,6 +565,7 @@ def render_analysis_panel(state: GameState) -> None:
                         if diff_line != "-":
                             st.write(f"  Δ zum Best-Move: {diff_line}")
                     if sm.pv:
+                        st.write(_format_pv_sentence(sm.pv))
                         st.code(_format_pv(sm.pv), language="text")
 
             hist: History | None = getattr(st.session_state, "state_history", None)
