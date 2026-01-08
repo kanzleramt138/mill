@@ -358,6 +358,15 @@ def _format_pv(pv, *, per_line: int = 4) -> str:
     return "\n".join(chunks)
 
 
+def _format_pv_sentence(pv) -> str:
+    if not pv:
+        return "-"
+    steps = [_format_ply(p) for p in pv]
+    if len(steps) == 1:
+        return f"Wenn du {steps[0]}."
+    return "Wenn du " + ", dann ".join(steps) + "."
+
+
 def render_analysis_panel(state: GameState) -> None:
     """Seitliches Analyse-Panel (read-only)."""
     import streamlit as st  # lokal halten
@@ -486,6 +495,7 @@ def render_analysis_panel(state: GameState) -> None:
                 st.write(f"Best move: {_format_ply(result.best_move)} (score {result.score:.2f})")
             if result.pv:
                 st.write("PV:")
+                st.write(_format_pv_sentence(result.pv))
                 st.code(_format_pv(result.pv), language="text")
             if result.breakdown:
                 st.write("Eval breakdown:")
@@ -499,6 +509,7 @@ def render_analysis_panel(state: GameState) -> None:
                     label = _classify_move_loss(loss, thresholds)
                     st.write("%s: %.2f (loss %.2f, %s)" % (_format_ply(sm.ply), sm.score, loss, label))
                     if sm.pv:
+                        st.write(_format_pv_sentence(sm.pv))
                         st.code(_format_pv(sm.pv), language="text")
 
             hist: History | None = getattr(st.session_state, "state_history", None)
