@@ -99,6 +99,27 @@
 - Didaktik: Komplex, nur sinnvoll wenn sauber implementiert.
 - Empfehlung: Gut, dass es aktuell deaktiviert ist.
 
+## 2b) Status-Matrix (Ist-Stand)
+
+| Metrik | Implementiert | UI Weight | Tests | Phase-Scaling | Notes |
+| --- | --- | --- | --- | --- | --- |
+| Material | ja | ja | nicht explizit | nein | Basis-Metrik |
+| Mills | ja | ja | nicht explizit | nein | evtl. Gewicht vs. Open Mills pruefen |
+| Open Mills | ja | ja | nicht explizit | nein | wichtig fuer Lernmodus |
+| Mobility | ja | ja | nicht explizit | nein | Overlay-Kandidat |
+| Threats (Mill-in-1) | ja | ja | nicht explizit | nein | Hints bereits vorhanden |
+| Blocked Opponent | ja | ja | nicht explizit | nein | Overlay-Kandidat |
+| Double Threats | ja | ja | teilweise (Tier-2 Tests) | nein | Hints bereits vorhanden |
+| Connectivity | ja | ja | teilweise (Tier-2 Tests) | nein | Tuning offen |
+| Initiative (Strategic) | ja (weights=0) | ja | teilweise (Overlap-Test) | nein | Tuning offen |
+| Initiative (Tactical) | ja (weights=0) | ja | teilweise (Overlap-Test) | nein | Tuning offen |
+
+### Ableitung (naechste Schritte)
+- Explizite Tests fuer Tier-1 Metriken ergaenzen (Material/Mills/Open Mills/Mobility/Threats/Blocked).
+- Eval-Tuning + Phasen-Skalierung definieren (v. a. Initiative, ggf. Mobility).
+- UI-Feinschliff: tooltips/Legenden pro Metrik (Why-Panel + Weights).
+- Optional: Board-Overlay fuer Mobility/Blocked.
+
 ## 3) Why Panel - Klassifikation
 
 ### Schwellenwerte

@@ -252,12 +252,20 @@ def sidebar_controls() -> None:
     if "hints_enabled" not in st.session_state:
         st.session_state.hints_enabled = False
 
-    st.sidebar.toggle("Hinweise anzeigen", key="hints_enabled")
+    st.sidebar.toggle(
+        "Hinweise anzeigen",
+        key="hints_enabled",
+        help="Zeigt Taktik-Hints unter dem Best Move.",
+    )
 
     if "threat_overlay" not in st.session_state:
         st.session_state.threat_overlay = False
 
-    st.sidebar.toggle("Threat-Overlay", key="threat_overlay")
+    st.sidebar.toggle(
+        "Threat-Overlay",
+        key="threat_overlay",
+        help="Zeigt Drohfelder des Gegners (read-only).",
+    )
 
     st.sidebar.subheader("Engine (Search)")
     if "search_depth" not in st.session_state:
@@ -273,12 +281,56 @@ def sidebar_controls() -> None:
     if "search_cache_size" not in st.session_state:
         st.session_state.search_cache_size = 8
 
-    st.sidebar.number_input("Depth", min_value=1, max_value=8, key="search_depth")
-    st.sidebar.number_input("Time (ms, 0=off)", min_value=0, max_value=5000, step=50, key="search_time_ms")
-    st.sidebar.number_input("Top-N", min_value=1, max_value=10, key="search_top_n")
-    st.sidebar.toggle("Use TT", key="search_use_tt")
-    st.sidebar.number_input("Cache TTL (s, 0=off)", min_value=0, max_value=30, key="search_cache_ttl")
-    st.sidebar.number_input("Cache Size", min_value=1, max_value=32, key="search_cache_size")
+    st.sidebar.number_input(
+        "Depth",
+        min_value=1,
+        max_value=8,
+        key="search_depth",
+        help="Maximale Suchtiefe in Ply (2 = eigener Zug + Antwort).",
+    )
+    st.sidebar.number_input(
+        "Time (ms, 0=off)",
+        min_value=0,
+        max_value=5000,
+        step=50,
+        key="search_time_ms",
+        help="Zeitlimit fuer Iterative Deepening. 0 = nur Depth.",
+    )
+    st.sidebar.number_input(
+        "Top-N",
+        min_value=1,
+        max_value=10,
+        key="search_top_n",
+        help="Anzahl der Top-Zuege im Why Panel.",
+    )
+    st.sidebar.toggle(
+        "Use TT",
+        key="search_use_tt",
+        help="Transposition Table fuer bereits analysierte Stellungen.",
+    )
+    st.sidebar.number_input(
+        "Cache TTL (s, 0=off)",
+        min_value=0,
+        max_value=30,
+        key="search_cache_ttl",
+        help="UI/Analyse-Cache (nicht TT). 0 = aus.",
+    )
+    st.sidebar.number_input(
+        "Cache Size",
+        min_value=1,
+        max_value=32,
+        key="search_cache_size",
+        help="UI/Analyse-Cache Groesse (nicht TT).",
+    )
+
+    with st.sidebar.expander("Legende Engine (Search)", expanded=False):
+        st.markdown(
+            "- Depth: mehr Tiefe = langsamer, aber genauer.\n"
+            "- Time: Zeit > Tiefe fuer Analyse-UX.\n"
+            "- Top-N: mehr Alternativen = besseres Lernen.\n"
+            "- TT: beschleunigt Suche durch Caching.\n"
+            "- Cache: nur UI, keine Spielstaerke."
+        )
 
     st.sidebar.subheader("Eval Weights")
     if "w_material" not in st.session_state:
@@ -302,16 +354,93 @@ def sidebar_controls() -> None:
     if "w_initiative_tactical" not in st.session_state:
         st.session_state.w_initiative_tactical = 0.0
 
-    st.sidebar.number_input("Material", min_value=0.0, max_value=20.0, step=0.5, key="w_material")
-    st.sidebar.number_input("Mills", min_value=0.0, max_value=20.0, step=0.5, key="w_mills")
-    st.sidebar.number_input("Open Mills", min_value=0.0, max_value=20.0, step=0.5, key="w_open_mills")
-    st.sidebar.number_input("Mobility", min_value=0.0, max_value=10.0, step=0.5, key="w_mobility")
-    st.sidebar.number_input("Threats (Mill-in-1)", min_value=0.0, max_value=10.0, step=0.5, key="w_threats_mill_in_1")
-    st.sidebar.number_input("Blocked Opponent", min_value=0.0, max_value=10.0, step=0.5, key="w_blocked_opponent")
-    st.sidebar.number_input("Double Threats", min_value=0.0, max_value=10.0, step=0.5, key="w_double_threats")
-    st.sidebar.number_input("Connectivity", min_value=0.0, max_value=10.0, step=0.5, key="w_connectivity")
-    st.sidebar.number_input("Initiative (Strategic)", min_value=0.0, max_value=10.0, step=0.5, key="w_initiative_strategic")
-    st.sidebar.number_input("Initiative (Tactical)", min_value=0.0, max_value=10.0, step=0.5, key="w_initiative_tactical")
+    st.sidebar.number_input(
+        "Material",
+        min_value=0.0,
+        max_value=20.0,
+        step=0.5,
+        key="w_material",
+        help="Differenz Steine auf Brett (ggf. in Hand).",
+    )
+    st.sidebar.number_input(
+        "Mills",
+        min_value=0.0,
+        max_value=20.0,
+        step=0.5,
+        key="w_mills",
+        help="Anzahl bestehender Muehlen.",
+    )
+    st.sidebar.number_input(
+        "Open Mills",
+        min_value=0.0,
+        max_value=20.0,
+        step=0.5,
+        key="w_open_mills",
+        help="Offene Muehlen (2 in Linie + 1 frei).",
+    )
+    st.sidebar.number_input(
+        "Mobility",
+        min_value=0.0,
+        max_value=10.0,
+        step=0.5,
+        key="w_mobility",
+        help="Anzahl legaler Zuege.",
+    )
+    st.sidebar.number_input(
+        "Threats (Mill-in-1)",
+        min_value=0.0,
+        max_value=10.0,
+        step=0.5,
+        key="w_threats_mill_in_1",
+        help="Zuege, die sofort eine Muehle schliessen.",
+    )
+    st.sidebar.number_input(
+        "Blocked Opponent",
+        min_value=0.0,
+        max_value=10.0,
+        step=0.5,
+        key="w_blocked_opponent",
+        help="Gegnersteine ohne legale Zuege.",
+    )
+    st.sidebar.number_input(
+        "Double Threats",
+        min_value=0.0,
+        max_value=10.0,
+        step=0.5,
+        key="w_double_threats",
+        help="Felder mit zwei Muehlen-Drohungen.",
+    )
+    st.sidebar.number_input(
+        "Connectivity",
+        min_value=0.0,
+        max_value=10.0,
+        step=0.5,
+        key="w_connectivity",
+        help="Qualitaet/Verbund der Felder.",
+    )
+    st.sidebar.number_input(
+        "Initiative (Strategic)",
+        min_value=0.0,
+        max_value=10.0,
+        step=0.5,
+        key="w_initiative_strategic",
+        help="Strategischer Druck/Optionen.",
+    )
+    st.sidebar.number_input(
+        "Initiative (Tactical)",
+        min_value=0.0,
+        max_value=10.0,
+        step=0.5,
+        key="w_initiative_tactical",
+        help="Taktischer Zwang (direkte Drohungen).",
+    )
+
+    with st.sidebar.expander("Legende Eval Weights", expanded=False):
+        st.markdown(
+            "- Score = Summe(feature * weight).\n"
+            "- Hoehere Gewichte -> staerkere Wirkung.\n"
+            "- Gewicht 0 deaktiviert eine Metrik."
+        )
 
     st.sidebar.subheader("Why Panel")
     if "class_best_max" not in st.session_state:
@@ -323,10 +452,46 @@ def sidebar_controls() -> None:
     if "class_mistake_max" not in st.session_state:
         st.session_state.class_mistake_max = 3.0
 
-    st.sidebar.number_input("Best <= loss", min_value=0.0, max_value=5.0, step=0.05, key="class_best_max")
-    st.sidebar.number_input("Good <= loss", min_value=0.0, max_value=5.0, step=0.05, key="class_good_max")
-    st.sidebar.number_input("Inaccuracy <= loss", min_value=0.0, max_value=10.0, step=0.1, key="class_inaccuracy_max")
-    st.sidebar.number_input("Mistake <= loss", min_value=0.0, max_value=20.0, step=0.1, key="class_mistake_max")
+    loss_help = "loss = best_score - move_score (kleiner ist besser)."
+    st.sidebar.number_input(
+        "Best <= loss",
+        min_value=0.0,
+        max_value=5.0,
+        step=0.05,
+        key="class_best_max",
+        help=loss_help,
+    )
+    st.sidebar.number_input(
+        "Good <= loss",
+        min_value=0.0,
+        max_value=5.0,
+        step=0.05,
+        key="class_good_max",
+        help=loss_help,
+    )
+    st.sidebar.number_input(
+        "Inaccuracy <= loss",
+        min_value=0.0,
+        max_value=10.0,
+        step=0.1,
+        key="class_inaccuracy_max",
+        help=loss_help,
+    )
+    st.sidebar.number_input(
+        "Mistake <= loss",
+        min_value=0.0,
+        max_value=20.0,
+        step=0.1,
+        key="class_mistake_max",
+        help=loss_help,
+    )
+
+    with st.sidebar.expander("Legende Why Panel", expanded=False):
+        st.markdown(
+            "- loss = best_score - move_score.\n"
+            "- Best/Good/Inaccuracy/Mistake/Blunder nach Schwellwerten.\n"
+            "- Kategorie wichtiger als exakter Score."
+        )
 
 
 def _format_positions(positions: set[int]) -> str:

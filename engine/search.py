@@ -188,10 +188,8 @@ def _negamax_root(
     best_score = float("-inf")
     best_pv: List[Ply] = []
     scored_raw: List[Tuple[Ply, float, List[Ply], EvalBreakdown]] = []
-    scored: List[ScoredMove] = []
     for ply in plies:
         nxt = apply_ply(state, ply)
-        _, breakdown = evaluate(nxt, ctx.for_player, ctx.eval_weights)
         score, child_pv, stopped = _negamax(nxt, depth - 1, -beta, -alpha, -color, ctx)
         if stopped:
             return best_score, best_pv, [], True
@@ -402,11 +400,21 @@ def _is_valid_state(state: object) -> bool:
 
 def _best_breakdown(scored_raw: List[Tuple[Ply, float, List[Ply], EvalBreakdown]]) -> EvalBreakdown:
     if not scored_raw:
-        return {}
+        empty: EvalBreakdown = {}
+        return empty
     best = max(scored_raw, key=lambda item: item[1])
     return best[3]
 
 
 def _diff_breakdowns(best: EvalBreakdown, other: EvalBreakdown) -> EvalBreakdown:
     keys = set(best) | set(other)
-    return {key: best.get(key, 0.0) - other.get(key, 0.0) for key in keys}
+    diff: EvalBreakdown = {}
+    for key in keys:
+        best_val = best.get(key, 0.0)
+        other_val = other.get(key, 0.0)
+        if not isinstance(best_val, (int, float)):
+            best_val = 0.0
+        if not isinstance(other_val, (int, float)):
+            other_val = 0.0
+        diff[key] = float(best_val) - float(other_val)
+    return diff
