@@ -338,6 +338,44 @@ def _classify_move_loss(delta: float, thresholds: dict[str, float]) -> str:
     return "Blunder"
 
 
+def _label_marker(label: str) -> str:
+    markers = {
+        "Best": "✅",
+        "Good": "✅",
+        "Inaccuracy": "⚠️",
+        "Mistake": "❌",
+        "Blunder": "💥",
+    }
+    return markers.get(label, "•")
+
+
+def _format_class_label(label: str) -> str:
+    return f"{_label_marker(label)} **{label}**"
+
+
+def _render_why_legend(thresholds: dict[str, float]) -> None:
+    best = thresholds["best"]
+    good = thresholds["good"]
+    inaccuracy = thresholds["inaccuracy"]
+    mistake = thresholds["mistake"]
+    st.markdown("**Legende (Why Panel)**")
+    st.markdown(
+        "- **loss / Δ zum Best‑Move**: Score‑Abstand zum besten Zug "
+        "(best_score − move_score, min. 0)."
+    )
+    st.markdown(
+        "\n".join(
+            [
+                f"- {_format_class_label('Best')}: loss ≤ {best:.2f}",
+                f"- {_format_class_label('Good')}: loss ≤ {good:.2f}",
+                f"- {_format_class_label('Inaccuracy')}: loss ≤ {inaccuracy:.2f}",
+                f"- {_format_class_label('Mistake')}: loss ≤ {mistake:.2f}",
+                f"- {_format_class_label('Blunder')}: loss > {mistake:.2f}",
+            ]
+        )
+    )
+
+
 def _find_transition_ply(prev_state: GameState, next_state: GameState):
     for ply in legal_plies(prev_state):
         try:
@@ -482,6 +520,7 @@ def render_analysis_panel(state: GameState) -> None:
                 "inaccuracy": inaccuracy_threshold,
                 "mistake": mistake_threshold,
             }
+            _render_why_legend(thresholds)
             if result.best_move is not None:
                 st.write(f"Best move: {_format_ply(result.best_move)} (score {result.score:.2f})")
             if result.pv:
@@ -497,7 +536,10 @@ def render_analysis_panel(state: GameState) -> None:
                 for sm in result.top_moves:
                     loss = max(0.0, best_score - sm.score)
                     label = _classify_move_loss(loss, thresholds)
-                    st.write("%s: %.2f (loss %.2f, %s)" % (_format_ply(sm.ply), sm.score, loss, label))
+                    st.markdown(
+                        "%s: %.2f (loss %.2f, %s)"
+                        % (_format_ply(sm.ply), sm.score, loss, _format_class_label(label))
+                    )
                     if sm.pv:
                         st.code(_format_pv(sm.pv), language="text")
 
@@ -527,9 +569,14 @@ def render_analysis_panel(state: GameState) -> None:
                     else:
                         last_loss = max(0.0, last_result.score - last_score)
                         last_label = _classify_move_loss(last_loss, thresholds)
-                        st.write(
+                        st.markdown(
                             "Last move: %s (score %.2f, loss %.2f, %s)"
-                            % (_format_ply(last_ply), last_score, last_loss, last_label)
+                            % (
+                                _format_ply(last_ply),
+                                last_score,
+                                last_loss,
+                                _format_class_label(last_label),
+                            )
                         )
 
 
