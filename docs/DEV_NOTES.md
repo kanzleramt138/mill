@@ -93,6 +93,8 @@ und dann Hard-Reload: **Ctrl+F5**.
 - `ActionEvent` typisieren als **discriminated union** nach `kind`
 
 ## Analyse / Overlays (read-only)
+- TODO: tune initiative weights and consider phase-specific scaling (placing vs moving/flying).
+
 Aktuell gibt es ein bewusst leichtgewichtiges Analyse-Panel und ein Threat-Overlay.
 
 ### Analyse-Panel

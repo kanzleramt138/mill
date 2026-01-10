@@ -29,6 +29,8 @@ class EvalBreakdown(TypedDict, total=False):
     blocked_opponent: float
     double_threats: float
     connectivity: float
+    initiative_strategic: float
+    initiative_tactical: float
 
 @dataclass(frozen=True)
 class ThreatReport:
@@ -69,3 +71,5 @@ class EvalWeights:
     blocked_opponent: float = 0.5
     double_threats: float = 1.0
     connectivity: float = 0.5
+    initiative_strategic: float = 0.0
+    initiative_tactical: float = 0.0

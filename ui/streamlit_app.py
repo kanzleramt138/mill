@@ -297,6 +297,10 @@ def sidebar_controls() -> None:
         st.session_state.w_double_threats = 1.0
     if "w_connectivity" not in st.session_state:
         st.session_state.w_connectivity = 0.5
+    if "w_initiative_strategic" not in st.session_state:
+        st.session_state.w_initiative_strategic = 0.0
+    if "w_initiative_tactical" not in st.session_state:
+        st.session_state.w_initiative_tactical = 0.0
 
     st.sidebar.number_input("Material", min_value=0.0, max_value=20.0, step=0.5, key="w_material")
     st.sidebar.number_input("Mills", min_value=0.0, max_value=20.0, step=0.5, key="w_mills")
@@ -306,6 +310,8 @@ def sidebar_controls() -> None:
     st.sidebar.number_input("Blocked Opponent", min_value=0.0, max_value=10.0, step=0.5, key="w_blocked_opponent")
     st.sidebar.number_input("Double Threats", min_value=0.0, max_value=10.0, step=0.5, key="w_double_threats")
     st.sidebar.number_input("Connectivity", min_value=0.0, max_value=10.0, step=0.5, key="w_connectivity")
+    st.sidebar.number_input("Initiative (Strategic)", min_value=0.0, max_value=10.0, step=0.5, key="w_initiative_strategic")
+    st.sidebar.number_input("Initiative (Tactical)", min_value=0.0, max_value=10.0, step=0.5, key="w_initiative_tactical")
 
     st.sidebar.subheader("Why Panel")
     if "class_best_max" not in st.session_state:
@@ -526,6 +532,8 @@ def render_analysis_panel(state: GameState) -> None:
                 blocked_opponent=float(st.session_state.get("w_blocked_opponent", 0.5)),
                 double_threats=float(st.session_state.get("w_double_threats", 1.0)),
                 connectivity=float(st.session_state.get("w_connectivity", 0.5)),
+                initiative_strategic=float(st.session_state.get("w_initiative_strategic", 0.0)),
+                initiative_tactical=float(st.session_state.get("w_initiative_tactical", 0.0)),
             )
             cache_key = (
                 position_key_from_state(state),
@@ -542,6 +550,8 @@ def render_analysis_panel(state: GameState) -> None:
                     weights.blocked_opponent,
                     weights.double_threats,
                     weights.connectivity,
+                    weights.initiative_strategic,
+                    weights.initiative_tactical,
                 ),
                 int(state.to_move),
             )

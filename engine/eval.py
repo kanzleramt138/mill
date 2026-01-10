@@ -24,6 +24,17 @@ def evaluate(state: GameState, player: Stone, weights: EvalWeights | None = None
     w_blk = weights.blocked_opponent
     w_double = weights.double_threats
     w_conn = weights.connectivity
+    w_init_strat = weights.initiative_strategic
+    w_init_tact = weights.initiative_tactical
+
+    use_initiative = w_init_strat != 0.0 or w_init_tact != 0.0
+    if use_initiative:
+        w_mob = 0.0
+        w_open = 0.0
+        w_thr = 0.0
+        w_blk = 0.0
+        w_double = 0.0
+        w_conn = 0.0
 
     mat = state.stones_on_board(player) - state.stones_on_board(opp)
     mills = _count_mills(state, player) - _count_mills(state, opp)
@@ -33,6 +44,8 @@ def evaluate(state: GameState, player: Stone, weights: EvalWeights | None = None
     blk = len(blocked_stones(state, opp)) - len(blocked_stones(state, player))
     double_thr = len(double_threat_squares(state, player)) - len(double_threat_squares(state, opp))
     conn = _connectivity_score(state, player) - _connectivity_score(state, opp)
+    init_strat = mob + open_mills + blk + conn
+    init_tact = thr + double_thr
 
     breakdown: EvalBreakdown = {
         "material": w_mat * mat,
@@ -43,6 +56,8 @@ def evaluate(state: GameState, player: Stone, weights: EvalWeights | None = None
         "blocked_opponent": w_blk * blk,
         "double_threats": w_double * double_thr,
         "connectivity": w_conn * conn,
+        "initiative_strategic": w_init_strat * init_strat,
+        "initiative_tactical": w_init_tact * init_tact,
     }
 
     score = (
@@ -54,6 +69,8 @@ def evaluate(state: GameState, player: Stone, weights: EvalWeights | None = None
         + breakdown["blocked_opponent"]
         + breakdown["double_threats"]
         + breakdown["connectivity"]
+        + breakdown["initiative_strategic"]
+        + breakdown["initiative_tactical"]
     )
     return score, breakdown
 
