@@ -342,6 +342,42 @@ def _classify_move_loss(delta: float, thresholds: dict[str, float]) -> str:
     return "Blunder"
 
 
+def _label_marker(label: str) -> str:
+    markers = {
+        "Best": "✅",
+        "Good": "✅",
+        "Inaccuracy": "⚠️",
+        "Mistake": "❌",
+        "Blunder": "💥",
+    }
+    return markers.get(label, "•")
+
+
+def _format_class_label(label: str) -> str:
+    return f"{_label_marker(label)} **{label}**"
+
+
+def _render_why_legend(thresholds: dict[str, float]) -> None:
+    best = thresholds["best"]
+    good = thresholds["good"]
+    inaccuracy = thresholds["inaccuracy"]
+    mistake = thresholds["mistake"]
+    st.markdown("**Legende (Why Panel)**")
+    st.markdown(
+        "- **loss / Δ zum Best‑Move**: Score‑Abstand zum besten Zug "
+        "(best_score − move_score, min. 0)."
+    )
+    st.markdown(
+        "\n".join(
+            [
+                f"- {_format_class_label('Best')}: loss ≤ {best:.2f}",
+                f"- {_format_class_label('Good')}: loss ≤ {good:.2f}",
+                f"- {_format_class_label('Inaccuracy')}: loss ≤ {inaccuracy:.2f}",
+                f"- {_format_class_label('Mistake')}: loss ≤ {mistake:.2f}",
+                f"- {_format_class_label('Blunder')}: loss > {mistake:.2f}",
+            ]
+        )
+    )
 def _format_hint_bullets(hints: dict[str, object]) -> list[str]:
     bullets: list[str] = []
     missed = bool(hints.get("missed_mill_in_1"))
@@ -554,6 +590,7 @@ def render_analysis_panel(state: GameState) -> None:
                 "inaccuracy": inaccuracy_threshold,
                 "mistake": mistake_threshold,
             }
+            _render_why_legend(thresholds)
             if result.best_move is not None:
                 st.write(f"Best move: {_format_ply(result.best_move)} (score {result.score:.2f})")
                 _render_tactic_hints(state, result.best_move)
@@ -643,12 +680,16 @@ def render_analysis_panel(state: GameState) -> None:
                         st.write(f"Last move: {_format_ply(last_ply)} (not in Top-N)")
                     else:
                         last_loss = max(0.0, last_result.score - last_score)
-                        last_label = classify_move_loss(last_loss, thresholds)
-                        st.write(
+                        last_label = _classify_move_loss(last_loss, thresholds)
+                        st.markdown(
                             "Last move: %s (score %.2f, loss %.2f, %s)"
-                            % (_format_ply(last_ply), last_score, last_loss, last_label)
+                            % (
+                                _format_ply(last_ply),
+                                last_score,
+                                last_loss,
+                                _format_class_label(last_label),
+                            )
                         )
-
 
 
 def main() -> None:
