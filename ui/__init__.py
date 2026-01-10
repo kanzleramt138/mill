@@ -1,9 +1,8 @@
-from mill.board_component import muehle_board
-from mill.board_svg import POS, render_board_svg
-from mill.history import History
-from mill.notation import action_to_notation, pos_label
-from mill.ui import clear_selection, ensure_ui_state
-
+from .board_component import muehle_board
+from .board_svg import POS, render_board_svg
+from .ui import clear_selection, ensure_ui_state
+from core.history import History
+from core.notation import action_to_notation, pos_label
 
 __all__ = [
     "POS",
@@ -15,3 +14,4 @@ __all__ = [
     "pos_label",
     "render_board_svg",
 ]
+

@@ -86,17 +86,17 @@ und dann Hard-Reload: **Ctrl+F5**.
 ## Backend-Regeln / Typing / Tests
 
 ### Leitlinien (wichtig)
-- `mill/state.py`, `mill/rules.py`, `mill/graph.py` sind **streamlit-frei**
+- `core/state.py`, `core/rules.py`, `core/graph.py` sind **streamlit-frei**
 - Regel-Logik als **pure functions**, z. B.:
   - `apply_action(state, action) -> new_state`
-- UI (Streamlit) nur in `app.py` und `mill/ui.py`
+- UI (Streamlit) nur in `app.py` und `ui/ui.py`
 - `ActionEvent` typisieren als **discriminated union** nach `kind`
 
 ## Analyse / Overlays (read-only)
 Aktuell gibt es ein bewusst leichtgewichtiges Analyse-Panel und ein Threat-Overlay.
 
 ### Analyse-Panel
-- Implementiert in `app.py` (`render_analysis_panel`) und `mill/analysis.py`.
+- Implementiert in `app.py` (`render_analysis_panel`), `engine/report.py` und `core/analysis.py`.
 - UI: In der rechten Spalte als Expander „Analyse (aktuelle Stellung)“.
 - Inhalt (derzeit): Threat-Squares, Mobility (Score/Ø), blockierte Steine, Kandidatenzüge für `to_move`.
 
@@ -104,7 +104,7 @@ Aktuell gibt es ein bewusst leichtgewichtiges Analyse-Panel und ein Threat-Overl
 - UI: Sidebar Toggle „Threat-Overlay“.
 - Bedeutung: Es werden die **direkten Drohfelder des Gegners** angezeigt (aus Sicht des Spielers am Zug).
 - Technisch:
-  - `compute_threat_squares(state, opponent(state.to_move))`
+  - `threat_overlay_targets(state)` (Engine-Fassade)
   - wird als `hint_targets` an `render_board_svg(...)` übergeben.
 
 **Wichtig:** `compute_threat_squares` ist Mustererkennung und prüft bewusst keine Reichweite/Legalität (Place vs Move). Overlays ändern nie den `GameState`.
@@ -139,5 +139,5 @@ pytest -q
 ## Optional: späteres Frontend-Build (nicht aktiv)
 Wenn du später auf Vite/webpack gehst:
 - Build-Output in `dist/` oder `build/`
-- `mill/board_component.py` sollte dann auf diesen Ordner zeigen
+- `ui/board_component.py` sollte dann auf diesen Ordner zeigen
 - dann darfst du ESM verwenden (über bundling), aber nicht im „static“ Root ohne Build.

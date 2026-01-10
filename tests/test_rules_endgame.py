@@ -1,10 +1,10 @@
 from dataclasses import replace
 from typing import List
 
-from mill.graph import MILLS, NEIGHBORS
-from mill.state import GameState, Stone
-import mill.rules as rules
-from mill.rules import (
+from core.graph import MILLS, NEIGHBORS
+from core.state import GameState, Stone
+import core.rules as rules
+from core.rules import (
     removable_positions,
     is_terminal,
     winner,
@@ -99,7 +99,7 @@ def test_terminal_and_winner_when_to_move_has_no_legal_moves(monkeypatch) -> Non
     state = _state_with_board(board, to_move=Stone.WHITE)
 
     # Simuliere: es gibt keine legalen Aktionen
-    import mill.rules as rules
+    import core.rules as rules
     monkeypatch.setattr(rules, "legal_actions", lambda _s: [])
 
     assert rules.legal_actions(state) == []

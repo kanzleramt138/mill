@@ -1,5 +1,5 @@
 from __future__ import annotations
-from mill.state import GameState, Stone
+from core.state import GameState, Stone
 from engine import analyze, best_move, Limits, AnalysisResult, Ply
 
 def test_engine_analyze_shape() -> None:

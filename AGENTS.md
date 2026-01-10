@@ -22,11 +22,12 @@ Dieses Repo implementiert ƒ?zMÇ¬hleƒ?o (Nine Men's Morris) als Streamlit-App
 - wendet fertige Aktionen deterministisch an
 
 ## Dateien & Verantwortlichkeiten
-- `mill/state.py`: DomÇÏnenmodell (`GameState`, `Stone`, helpers). Kein Streamlit.
-- `mill/graph.py`: Konstanten (`NEIGHBORS`, `MILLS`, Positionen).
-- `mill/rules.py`: Regel-Engine (Legal moves, mills, remove, end conditions). Bevorzugt pure functions.
-- `mill/board_svg.py`: SVG Rendering (keine Regel-Logik erzwingen).
-- `mill/board_component.py`: Component bridge + Event-Typing.
+- `core/state.py`: DomÇÏnenmodell (`GameState`, `Stone`, helpers). Kein Streamlit.
+- `core/graph.py`: Konstanten (`NEIGHBORS`, `MILLS`, Positionen).
+- `core/rules.py`: Regel-Engine (Legal moves, mills, remove, end conditions). Bevorzugt pure functions.
+- `core/analysis.py`: Read-only Analyse/Heuristik/Planung (kein State-Mutieren).
+- `ui/board_svg.py`: SVG Rendering (keine Regel-Logik erzwingen).
+- `ui/board_component.py`: Component bridge + Event-Typing.
 - `engine/report.py`: Engine-Fassade fuer read-only Analyse/Overlays (Threats, Mobility, Kandidaten).
 - `ui/`: UI-Fassade (Re-Exports fuer Board/History/Notation/UI-Helper).
 - `muehle_board_component/`: Frontend (static). Keine ESM `import/export` verwenden, auÇYer es gibt ein Build (`dist/`/`build/`).
@@ -50,7 +51,7 @@ Dieses Repo implementiert ƒ?zMÇ¬hleƒ?o (Nine Men's Morris) als Streamlit-App
 
 ## Coding Guidelines
 - Regel-Logik als pure functions: `apply_action(state, action) -> new_state`.
-- Keine Streamlit-AbhÇÏngigkeit in `mill/rules.py`, `mill/state.py`, `mill/graph.py`.
+- Keine Streamlit-AbhÇÏngigkeit in `core/rules.py`, `core/state.py`, `core/graph.py`.
 - `GameState` snapshot-fÇÏhig, immutability bevorzugt.
 - Move-History/Undo/Redo:
   - jede Aktion erzeugt einen neuen Snapshot
@@ -90,7 +91,7 @@ Alle Overlays togglebar.
 ## Do / Donƒ?Tt
 - DO: kleine, nachvollziehbare Ç"nderungen; Tests mitliefern.
 - DO: Code klar trennen (rules vs UI).
-- DONƒ?TT: Logik in `board_svg.py` duplizieren, die in `rules.py` gehÇôrt.
+- DON'T: Logik in `ui/board_svg.py` duplizieren, die in `core/rules.py` gehoert.
 - DONƒ?TT: Frontend ESM verwenden, solange kein Build-Output (`dist/`/`build/`) existiert.
 
 ---

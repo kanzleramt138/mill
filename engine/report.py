@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import List
 
-from mill.analysis import (
+from core.analysis import (
     blocked_stones,
     compute_threat_squares,
     evaluate_light as _evaluate_light,
@@ -12,8 +12,8 @@ from mill.analysis import (
     scored_actions_for_to_move,
     tactic_hints_for_ply as _tactic_hints_for_ply,
 )
-from mill.rules import Action
-from mill.state import GameState, Stone, opponent
+from core.rules import Action
+from core.state import GameState, Stone, opponent
 
 
 @dataclass(frozen=True)

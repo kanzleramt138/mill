@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from typing import Tuple
 
-from mill.analysis import blocked_stones, compute_threat_squares, mobility_score
-from mill.graph import MILLS
-from mill.state import GameState, Stone, opponent
+from core.analysis import blocked_stones, compute_threat_squares, mobility_score
+from core.graph import MILLS
+from core.state import GameState, Stone, opponent
 
 from .types import EvalBreakdown, EvalWeights
 

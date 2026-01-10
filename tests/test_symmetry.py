@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from engine import Limits, analyze
-from mill.graph import SYMMETRY_MAPS
-from mill.rules import position_key_with_symmetry
-from mill.state import GameState, Stone
+from core.graph import SYMMETRY_MAPS
+from core.rules import position_key_with_symmetry
+from core.state import GameState, Stone
 
 
 def _apply_symmetry(board: list[Stone], mapping: tuple[int, ...]) -> list[Stone]:

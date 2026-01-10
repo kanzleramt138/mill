@@ -4,8 +4,8 @@ from engine import Ply, Limits, analyze, best_move, classify_move_loss
 from engine.eval import evaluate
 from engine.movegen import legal_plies
 from engine.search import _order_plies
-from mill.graph import MILLS
-from mill.state import GameState, Stone
+from core.graph import MILLS
+from core.state import GameState, Stone
 
 
 def test_best_move_returns_legal_ply() -> None:

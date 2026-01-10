@@ -12,7 +12,7 @@ from .report import (
     tactic_hints_for_ply,
     threat_overlay_targets,
 )
-from mill.rules import (
+from core.rules import (
     Action,
     advance_draw_tracker,
     apply_action,
@@ -23,7 +23,7 @@ from mill.rules import (
     removable_positions,
     winner,
 )
-from mill.state import GameState, Stone, opponent
+from core.state import GameState, Stone, opponent
 
 
 __all__ = [

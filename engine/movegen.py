@@ -3,8 +3,8 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import List
 
-from mill.rules import Action, apply_action, forms_mill_after_placement, legal_actions, phase_for, removable_positions
-from mill.state import GameState, Stone, opponent
+from core.rules import Action, apply_action, forms_mill_after_placement, legal_actions, phase_for, removable_positions
+from core.state import GameState, Stone, opponent
 
 from .types import MoveKind, Ply
 

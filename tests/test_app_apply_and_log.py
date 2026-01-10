@@ -1,8 +1,8 @@
 from types import SimpleNamespace
 
 import app
-from mill.rules import Action
-from mill.state import GameState
+from core.rules import Action
+from core.state import GameState
 
 
 def _make_session(state: GameState) -> SimpleNamespace:

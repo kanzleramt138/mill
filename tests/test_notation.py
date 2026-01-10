@@ -1,6 +1,6 @@
-from mill.state import GameState, Stone
-from mill.rules import Action
-from mill.notation import pos_label, action_to_notation
+from core.state import GameState, Stone
+from core.rules import Action
+from core.notation import pos_label, action_to_notation
 
 
 def test_pos_label_is_unique_for_all_positions() -> None:

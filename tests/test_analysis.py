@@ -1,9 +1,9 @@
 # tests/test_analysis.py
 from dataclasses import replace
 
-from mill.state import GameState, Stone
-from mill.graph import MILLS, NEIGHBORS
-from mill.analysis import (
+from core.state import GameState, Stone
+from core.graph import MILLS, NEIGHBORS
+from core.analysis import (
     compute_threat_squares,
     mobility_by_pos,
     blocked_stones,

@@ -1,5 +1,5 @@
-from mill.state import GameState
-from mill.history import History
+from core.state import GameState
+from core.history import History
 
 
 def test_history_push_creates_new_snapshot() -> None:

@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 from typing import Tuple, cast
 
-from mill.graph import MILLS
-from mill.state import Stone, DrawTracker, GameState
-from mill.rules import (
+from core.graph import MILLS
+from core.state import Stone, DrawTracker, GameState
+from core.rules import (
     advance_draw_tracker,
     draw_reason,
     position_key_from_state,

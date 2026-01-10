@@ -1,7 +1,7 @@
 # tests/test_analysis_basic.py
 from __future__ import annotations
-from mill.state import GameState, Stone
-from mill.analysis import (
+from core.state import GameState, Stone
+from core.analysis import (
     compute_threat_squares,
     mobility_by_pos,
     blocked_stones,
@@ -9,7 +9,7 @@ from mill.analysis import (
     mobility_profile,
     evaluate_light,
 )
-from mill.graph import NEIGHBORS
+from core.graph import NEIGHBORS
 
 def _empty_board() -> list[Stone]:
     return [Stone.EMPTY] * 24

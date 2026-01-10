@@ -2,9 +2,9 @@
 """Tests für tactic_hints_for_ply Funktion."""
 from dataclasses import replace
 
-from mill.state import GameState, Stone
-from mill.graph import MILLS
-from mill.analysis import tactic_hints_for_ply
+from core.state import GameState, Stone
+from core.graph import MILLS
+from core.analysis import tactic_hints_for_ply
 from engine.types import Ply
 
 

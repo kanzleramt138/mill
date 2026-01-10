@@ -1,5 +1,5 @@
 from __future__ import annotations
-from mill.rules import Action
+from core.rules import Action
 
 def test_action_str_place() -> None:
     a = Action(kind="place", dst=5)

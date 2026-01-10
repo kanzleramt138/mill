@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 
 from engine import Ply, apply_ply, legal_plies
-from mill.state import GameState, Stone
+from core.state import GameState, Stone
 
 
 def test_legal_plies_place_includes_removes_on_mill() -> None:

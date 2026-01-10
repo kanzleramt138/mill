@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from mill import (
+from core import (
     GameState,
     Stone,
     Phase,

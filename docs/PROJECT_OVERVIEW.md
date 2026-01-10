@@ -14,11 +14,11 @@ Eine Streamlit-App für „Mühle“ mit:
 ### `app.py`
 **Rolle:** Streamlit-Orchestrator.
 - initialisiert UI/Session-State
-- rendert Board-SVG über `mill/board_svg.py`
+- rendert Board-SVG über `ui/board_svg.py`
 - ruft Custom Component `muehle_board(...)` auf
 - übersetzt Click-Events in `Action` und wendet sie an (`apply_and_log(...)`), dann `st.rerun()`
 
-### `mill/state.py`
+### `core/state.py`
 **Rolle:** Domänenmodell.
 - `Stone` (EMPTY/WHITE/BLACK)
 - `GameState` (immutable dataclass, z. B. Board, `to_move`, `pending_remove`, etc.)
@@ -26,7 +26,7 @@ Eine Streamlit-App für „Mühle“ mit:
 
 **Leitlinie:** Keine UI- oder Frontend-Abhängigkeiten. Kein Streamlit.
 
-### `mill/graph.py`
+### `core/graph.py`
 **Rolle:** Spielfeld-Konstanten / Topologie.
 - Positionen 0..23
 - `NEIGHBORS` (Adjazenzen)
@@ -34,7 +34,7 @@ Eine Streamlit-App für „Mühle“ mit:
 
 **Leitlinie:** Rein statisch, deterministisch.
 
-### `mill/rules.py`
+### `core/rules.py`
 **Rolle:** Regel-Engine.
 - Mill-Erkennung (nach `place` und `move`)
 - Legal Actions für `PLACING`, `MOVING`, `FLYING`
@@ -44,18 +44,18 @@ Eine Streamlit-App für „Mühle“ mit:
 **Leitlinie:** Pure Functions bevorzugen:
 `apply_action(state, action) -> new_state`
 
-### `mill/history.py`
+### `core/history.py`
 **Rolle:** Undo/Redo-History (immutable).
 - `History(past, future)` als Snapshot-Stacks
 - `push(current)` legt Snapshot ab und leert Redo
 - `undo/redo` liefern jeweils `(new_history, state)` oder `None`
 
-### `mill/notation.py`
+### `core/notation.py`
 **Rolle:** Notation/Logging.
 - `pos_label(pos) -> "a1" .. "g7"`
 - `action_to_notation(action, before) -> "P:a7" | "M:a7-d7" | "R:b4"`
 
-### `mill/analysis.py`
+### `core/analysis.py`
 **Rolle:** Read-only Analyse/Heuristik/Planung (kein State-Mutieren).
 - Threat-Squares & Pre-Threat-Squares
 - Mobility (pro Stein, blockierte Steine, Profile)
@@ -65,10 +65,10 @@ Eine Streamlit-App für „Mühle“ mit:
 ### `engine/report.py`
 **Rolle:** Engine-Fassade fuer read-only Analyse/Overlays.
 - aggregiert Threats/Mobility/Blocked/Kandidaten fuer die UI
-- kapselt `mill/analysis.py` fuer saubere UI-Engine-Grenze
+- kapselt `core/analysis.py` fuer saubere UI-Engine-Grenze
 
 
-### `mill/board_svg.py`
+### `ui/board_svg.py`
 **Rolle:** Rendering (SVG).
 - zeichnet Board + Steine
 - optional: Highlights/Hints (Targets/Removables)
@@ -76,12 +76,12 @@ Eine Streamlit-App für „Mühle“ mit:
 
 **Leitlinie:** Kein Regelwissen erzwingen; nur „darstellen“.
 
-### `mill/ui.py`
+### `ui/ui.py`
 **Rolle:** Streamlit UI Helper (WIP).
 - Session-State Keys (z. B. selected source)
 - UI-Hilfsfunktionen (Label/Glyphs)
 
-### `mill/board_component.py`
+### `ui/board_component.py`
 **Rolle:** Python-Bridge zum Custom Component.
 - `declare_component` auf `muehle_board_component/`
 - Typing für Events (`ActionEvent`) – ideal als „discriminated union“

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from mill.rules import phase_for
-from mill.state import GameState, Stone
+from core.rules import phase_for
+from core.state import GameState, Stone
 
 
 def _empty_board() -> list[Stone]:
