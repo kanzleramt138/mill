@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import Iterable, List, Optional, Sequence, Tuple, Literal, Callable, cast
 import hashlib
 
-from .graph import MILLS, NEIGHBORS
+from .graph import MILLS, NEIGHBORS, SYMMETRY_MAPS
 from .state import GameState, Stone, opponent, DrawTracker, Phase
 
 
@@ -19,6 +19,7 @@ __all__ = [
     "mills_containing",
     "is_pos_in_mill",
     "position_key_from_state",
+    "position_key_with_symmetry",
     "advance_draw_tracker",
     "draw_reason",
     "forms_mill_after_placement",
@@ -116,6 +117,33 @@ def position_key_from_state(state: GameState) -> int:
     pending_remove = bool(getattr(state, "pending_remove", False))
     phase = phase_for(state, to_move)
 
+    return _position_key_from_board(board_seq, to_move, phase, pending_remove)
+
+
+def position_key_with_symmetry(state: GameState) -> int:
+    """
+    Deterministischer Key, kanonisiert über alle 8 Symmetrien.
+    """
+    board_seq = list(getattr(state, "board"))
+    to_move = getattr(state, "to_move")
+    pending_remove = bool(getattr(state, "pending_remove", False))
+    phase = phase_for(state, to_move)
+
+    best_key = _position_key_from_board(board_seq, to_move, phase, pending_remove)
+    for mapping in SYMMETRY_MAPS:
+        sym_board = _apply_symmetry(board_seq, mapping)
+        sym_key = _position_key_from_board(sym_board, to_move, phase, pending_remove)
+        if sym_key < best_key:
+            best_key = sym_key
+    return best_key
+
+
+def _position_key_from_board(
+    board_seq: Sequence[object],
+    to_move: Stone,
+    phase: Phase,
+    pending_remove: bool,
+) -> int:
     payload = "|".join(
         [
             f"tm={int(to_move)}",
@@ -126,6 +154,13 @@ def position_key_from_state(state: GameState) -> int:
     ).encode("utf-8")
 
     return int.from_bytes(hashlib.blake2b(payload, digest_size=8).digest(), "big")
+
+
+def _apply_symmetry(board_seq: Sequence[object], mapping: Sequence[int]) -> List[object]:
+    sym_board: List[object] = [0] * len(board_seq)
+    for idx, mapped in enumerate(mapping):
+        sym_board[mapped] = board_seq[idx]
+    return sym_board
 
 
 def advance_draw_tracker(

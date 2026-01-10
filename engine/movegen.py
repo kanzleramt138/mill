@@ -33,7 +33,28 @@ def legal_plies(state: GameState) -> List[Ply]:
 
 
 def apply_ply(state: GameState, ply: Ply) -> GameState:
-    """Wendet einen Composite-Ply an und liefert den Folgestatus ohne pending_remove."""
+    """
+    Wendet ein einzelnes Ply („Zug inkl. optionalem Remove") auf einen GameState an.
+
+    Diese Funktion bildet die zentrale Ply-Anwendungslogik der Engine:
+    Sie arbeitet rein auf dem übergebenen `state` und gibt einen neuen `GameState`
+    zurück, ohne weitere Engine-Strukturen (History, Suche, UI) zu berühren.
+
+    Sie validiert dabei:
+    - Konsistenz von `ply.kind` mit dem aktuellen Zustand (`pending_remove`,
+      Phase „flying" vs. `ply.kind == "fly"`).
+    - Vollständigkeit der Felder (`src`, `dst`, `remove`) je nach Ply-Typ.
+    - Korrektes Entfernen nach geschlossener Mühle mittels
+      :func:`removable_positions`.
+
+    Im Fehlerfall wird ein :class:`ValueError` geworfen (z. B. Remove ohne
+    geschlossene Mühle oder fehlendes Remove trotz `pending_remove`).
+
+    :param state: aktueller Spielzustand, auf den das Ply angewendet werden soll.
+    :param ply:   zu simulierendes Ply (typischerweise aus dem Engine-/Frontend-
+                  Kontext), das bereits grob legal sein sollte.
+    :return: neuer :class:`GameState` nach Anwendung des Plys.
+    """
     player = state.to_move
 
     if ply.kind == "fly":
@@ -51,23 +72,23 @@ def apply_ply(state: GameState, ply: Ply) -> GameState:
 
     if ply.kind == "place":
         if ply.dst is None:
-            raise ValueError("Place-Ply benoetigt dst")
+            raise ValueError("Place-Ply benötigt dst")
         mid = apply_action(state, Action(kind="place", dst=ply.dst))
     else:
         if ply.src is None or ply.dst is None:
-            raise ValueError("Move/Fly-Ply benoetigt src und dst")
+            raise ValueError("Move/Fly-Ply benötigt src und dst")
         mid = apply_action(state, Action(kind="move", src=ply.src, dst=ply.dst))
 
     if mid.pending_remove:
         if ply.remove is None:
             removables = removable_positions(mid, opponent(player))
             if removables:
-                raise ValueError("Ply muss Remove enthalten, da eine Muehle geschlossen wurde")
+                raise ValueError("Ply muss Remove enthalten, da eine Mühle geschlossen wurde")
             return replace(mid, pending_remove=False)
         nxt = apply_action(mid, Action(kind="remove", dst=ply.remove))
     else:
         if ply.remove is not None:
-            raise ValueError("Remove nur erlaubt, wenn eine Muehle geschlossen wurde")
+            raise ValueError("Remove nur erlaubt, wenn eine Mühle geschlossen wurde")
         nxt = mid
 
     return nxt

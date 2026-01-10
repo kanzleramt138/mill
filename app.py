@@ -27,8 +27,10 @@ from mill.analysis import (
     blocked_stones,
     scored_actions_for_to_move,
     evaluate_light,
+    tactic_hints_for_ply,
 )
-from engine import analyze, AnalysisResult, EvalWeights, Limits
+
+from engine import analyze, AnalysisResult, EvalWeights, Limits, classify_move_loss, score_ply
 from engine.movegen import apply_ply, legal_plies
 from mill.rules import position_key_from_state
 
@@ -69,6 +71,8 @@ def render_svg_board_interactive(state: GameState) -> None:
     )
 
     # Threat-Overlay: Drohfelder des Gegners von to_move
+    # Note: uses default fallback=True for defensive overlay - if opponent has no threats,
+    # shows player's own threats for awareness
     threat_targets: set[int] = set()
     if st.session_state.get("threat_overlay", False) and not game_finished:
         threat_targets = compute_threat_squares(state, opponent(state.to_move))
@@ -374,6 +378,41 @@ def _render_why_legend(thresholds: dict[str, float]) -> None:
             ]
         )
     )
+def _format_hint_bullets(hints: dict[str, object]) -> list[str]:
+    bullets: list[str] = []
+    missed = bool(hints.get("missed_mill_in_1"))
+    if missed:
+        missed_threats = hints.get("missed_threats", set())
+        if isinstance(missed_threats, set):
+            bullets.append(f"Mill-in-1 verpasst: {_format_positions(missed_threats)}")
+        else:
+            bullets.append("Mill-in-1 verpasst")
+
+    allowed = bool(hints.get("allowed_mill_in_1"))
+    if allowed:
+        allowed_threats = hints.get("allowed_threats", set())
+        if isinstance(allowed_threats, set):
+            bullets.append(f"Gegner bekommt Mill-in-1: {_format_positions(allowed_threats)}")
+        else:
+            bullets.append("Gegner bekommt Mill-in-1")
+
+    blocked_white = hints.get("blocked_white", set())
+    blocked_black = hints.get("blocked_black", set())
+    if isinstance(blocked_white, set) and isinstance(blocked_black, set):
+        bullets.append(
+            f"Blockierte Steine nach Zug: W {len(blocked_white)} / B {len(blocked_black)}"
+        )
+    return bullets
+
+
+def _render_tactic_hints(state: GameState, ply) -> None:
+    try:
+        hints = tactic_hints_for_ply(state, ply)
+    except ValueError:
+        return
+    bullets = _format_hint_bullets(hints)
+    if bullets:
+        st.markdown("\n".join(f"- {b}" for b in bullets))
 
 
 def _find_transition_ply(prev_state: GameState, next_state: GameState):
@@ -396,6 +435,37 @@ def _format_pv(pv, *, per_line: int = 4) -> str:
     return "\n".join(chunks)
 
 
+def _format_pv_sentence(pv) -> str:
+    if not pv:
+        return "-"
+    steps = [_format_ply(p) for p in pv]
+    if len(steps) == 1:
+        # Bei genau einem Schritt keinen grammatikalisch unvollständigen Konditionalsatz verwenden.
+        # Statt "Wenn du Place a7." nur "Place a7." ausgeben.
+        return f"{steps[0]}."
+    return "Wenn du " + ", dann ".join(steps) + "."
+  
+
+def _format_breakdown(
+    breakdown: dict[str, float],
+    *,
+    only_non_zero: bool = False,
+    signed: bool = False,
+) -> str:
+    if not breakdown:
+        return "-"
+    items = []
+    for key in sorted(breakdown.keys()):
+        value = breakdown[key]
+        if only_non_zero and abs(value) < 1e-9:
+            continue
+        if signed:
+            items.append(f"{key}: {value:+.2f}")
+        else:
+            items.append(f"{key}: {value:.2f}")
+    return ", ".join(items) if items else "-"
+
+
 def render_analysis_panel(state: GameState) -> None:
     """Seitliches Analyse-Panel (read-only)."""
     import streamlit as st  # lokal halten
@@ -411,7 +481,7 @@ def render_analysis_panel(state: GameState) -> None:
         base_eval_black = evaluate_light(state, Stone.BLACK)
 
         for player in (Stone.WHITE, Stone.BLACK):
-            threats = compute_threat_squares(state, player)
+            threats = compute_threat_squares(state, player, use_fallback=False)
             mobility = mobility_score(state, player)
             blocked = blocked_stones(state, player)
             profile = mobility_profile(state, player)
@@ -523,8 +593,10 @@ def render_analysis_panel(state: GameState) -> None:
             _render_why_legend(thresholds)
             if result.best_move is not None:
                 st.write(f"Best move: {_format_ply(result.best_move)} (score {result.score:.2f})")
+                _render_tactic_hints(state, result.best_move)
             if result.pv:
                 st.write("PV:")
+                st.write(_format_pv_sentence(result.pv))
                 st.code(_format_pv(result.pv), language="text")
             if result.breakdown:
                 st.write("Eval breakdown:")
@@ -535,12 +607,16 @@ def render_analysis_panel(state: GameState) -> None:
                 best_score = result.score
                 for sm in result.top_moves:
                     loss = max(0.0, best_score - sm.score)
-                    label = _classify_move_loss(loss, thresholds)
-                    st.markdown(
-                        "%s: %.2f (loss %.2f, %s)"
-                        % (_format_ply(sm.ply), sm.score, loss, _format_class_label(label))
-                    )
+                    label = classify_move_loss(loss, thresholds)
+                    st.write("%s: %.2f (loss %.2f, %s)" % (_format_ply(sm.ply), sm.score, loss, label))
+                    if sm.breakdown:
+                        st.write(f"  Breakdown: {_format_breakdown(sm.breakdown)}")
+                    if sm.breakdown_diff:
+                        diff_line = _format_breakdown(sm.breakdown_diff, only_non_zero=True, signed=True)
+                        if diff_line != "-":
+                            st.write(f"  Δ zum Best-Move: {diff_line}")
                     if sm.pv:
+                        st.write(_format_pv_sentence(sm.pv))
                         st.code(_format_pv(sm.pv), language="text")
 
             hist: History | None = getattr(st.session_state, "state_history", None)
@@ -548,6 +624,42 @@ def render_analysis_panel(state: GameState) -> None:
                 prev_state = hist.past[-1]
                 last_ply = _find_transition_ply(prev_state, state)
                 if last_ply is not None:
+                    last_limits = Limits(
+                        max_depth=depth,
+                        time_ms=time_ms,
+                        top_n=top_n,
+                        use_tt=use_tt,
+                        eval_weights=weights,
+                    )
+                    last_result = analyze(
+                        prev_state,
+                        limits=last_limits,
+                        for_player=prev_state.to_move,
+                    )
+                    last_score = None
+                    last_pv = None
+                    for sm in last_result.top_moves:
+                        if sm.ply == last_ply:
+                            last_score = sm.score
+                            last_pv = sm.pv
+                            break
+                    not_in_top_n = last_score is None
+                    if last_score is None:
+                        last_score, last_pv = score_ply(
+                            prev_state,
+                            last_ply,
+                            limits=last_limits,
+                            for_player=prev_state.to_move,
+                        )
+                    last_loss = max(0.0, last_result.score - last_score)
+                    last_label = _classify_move_loss(last_loss, thresholds)
+                    suffix = " (not in Top-N)" if not_in_top_n else ""
+                    st.write(
+                        "Last move: %s (score %.2f, loss %.2f, %s)%s"
+                        % (_format_ply(last_ply), last_score, last_loss, last_label, suffix)
+                    )
+                    if last_pv:
+                        st.code(_format_pv(last_pv), language="text")
                     last_result = analyze(
                         prev_state,
                         limits=Limits(

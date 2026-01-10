@@ -68,6 +68,33 @@ def test_compute_threat_squares_handles_multiple_open_mills() -> None:
     threats = compute_threat_squares(state, Stone.BLACK)
     assert {c1, c2}.issubset(threats)
 
+
+def test_compute_threat_squares_no_fallback_returns_empty_when_player_has_no_threats() -> None:
+    """Test that use_fallback=False returns empty set when player has no threats, 
+    even if opponent has threats."""
+    base = GameState.initial()
+    board = list(base.board)
+
+    # BLACK has an open mill (2 stones in a row, 3rd empty)
+    a, b, c = MILLS[0]
+    board[a] = Stone.BLACK
+    board[b] = Stone.BLACK
+    # Position c remains empty → creates open mill threat for BLACK
+
+    state = _state_with_board(board, to_move=Stone.WHITE)
+
+    # BLACK should have threats
+    threats_black = compute_threat_squares(state, Stone.BLACK, use_fallback=False)
+    assert c in threats_black
+
+    # WHITE has no stones, so should have no threats with use_fallback=False
+    threats_white_no_fallback = compute_threat_squares(state, Stone.WHITE, use_fallback=False)
+    assert threats_white_no_fallback == set()
+
+    # With fallback=True (default), WHITE should get BLACK's threats
+    threats_white_with_fallback = compute_threat_squares(state, Stone.WHITE, use_fallback=True)
+    assert c in threats_white_with_fallback
+
 def test_mobility_by_pos_moving_counts_empty_neighbors() -> None:
     base = GameState.initial()
     board = list(base.board)
@@ -225,3 +252,36 @@ def test_evaluate_light_prefers_state_with_more_mobility() -> None:
     s_free = _state_with_board(board_free, to_move=Stone.WHITE)
 
     assert evaluate_light(s_free, Stone.WHITE) > evaluate_light(s_blocked, Stone.WHITE)
+
+
+def test_evaluate_light_correctly_handles_one_sided_threats() -> None:
+    """Test that evaluate_light correctly handles when only opponent has threats.
+    This verifies the fix for the fallback issue where both sides would appear to have
+    equal threats when using the fallback mechanism."""
+    base = GameState.initial()
+    
+    # Create a state where BLACK has an open mill but WHITE has no threats
+    board = list(base.board)
+    a, b, c = MILLS[0]  # First mill (0, 1, 2)
+    board[a] = Stone.BLACK
+    board[b] = Stone.BLACK
+    # Position c remains empty → BLACK has open mill threat, WHITE has no threats
+    
+    # Give WHITE a stone somewhere else (not threatening a mill)
+    board[10] = Stone.WHITE
+    
+    state = _state_with_board(board, to_move=Stone.WHITE)
+    
+    # Verify threat counts are correct
+    black_threats = compute_threat_squares(state, Stone.BLACK, use_fallback=False)
+    white_threats = compute_threat_squares(state, Stone.WHITE, use_fallback=False)
+    assert len(black_threats) > 0
+    assert len(white_threats) == 0
+    
+    # WHITE's evaluation should be negative because BLACK has threats
+    eval_white = evaluate_light(state, Stone.WHITE)
+    # BLACK's evaluation should be positive because BLACK has threats  
+    eval_black = evaluate_light(state, Stone.BLACK)
+    
+    # The player with threats should have a better evaluation
+    assert eval_black > eval_white
