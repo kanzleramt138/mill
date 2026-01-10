@@ -3,13 +3,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 from enum import IntEnum
-from typing import Literal, Tuple
+from typing import Callable, Literal, Tuple, cast
 
 
 __all__ = [
     "Stone",
     "Phase",
     "opponent",
+    "resolve_phase",
     "DrawTracker",
     "GameState",
 ]
@@ -21,6 +22,30 @@ class Stone(IntEnum):
 
 # Type alias: phases are strictly typesafe
 Phase = Literal["placing", "moving", "flying"]
+PHASE_STRS: Tuple[str, str, str] = ("placing", "moving", "flying")
+
+
+def _as_phase(val: str) -> Phase:
+    if val in PHASE_STRS:
+        return cast(Phase, val)
+    raise ValueError(f"Unknown phase string: {val!r}")
+
+
+def resolve_phase(state: "GameState", player: Stone) -> Phase:
+    """Best effort: supports both method-based and attribute-based phase."""
+    phase_attr: Callable[[Stone], Phase] | Phase | str | None = getattr(state, "phase", None)
+
+    if callable(phase_attr):
+        return phase_attr(player)
+
+    if isinstance(phase_attr, str):
+        return _as_phase(phase_attr)
+
+    phase_str = getattr(state, "phase_str", None)
+    if isinstance(phase_str, str):
+        return _as_phase(phase_str)
+
+    raise TypeError("GameState must provide phase information via method or attribute.")
 
 
 def opponent(p: Stone) -> Stone:

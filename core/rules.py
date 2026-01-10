@@ -2,11 +2,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Iterable, List, Optional, Sequence, Tuple, Literal, Callable, cast
+from typing import Iterable, List, Optional, Sequence, Tuple, Literal
 
 from .graph import MILLS, NEIGHBORS
 from .hash import position_key_from_state
-from .state import GameState, Stone, opponent, DrawTracker, Phase
+from .state import GameState, Stone, opponent, DrawTracker, Phase, resolve_phase
 
 
 # Public API of this module:
@@ -55,36 +55,13 @@ DRAW_THREEFOLD_REPETITIONS = 3
 
 DrawReason = Literal["no_mill_20", "threefold"]
 
-PHASE_STRS: Tuple[str, str, str] = ("placing", "moving", "flying")
-
-def _as_phase(val: str) -> Phase:
-    if val in PHASE_STRS:
-        return cast(Phase, val)
-    raise ValueError(f"Unknown phase string: {val!r}")
-
-def _phase_for(state: GameState, player: Stone) -> Phase:
-    """Best effort: supports both method-based and attribute-based phase."""
-    phase_attr: Callable[[Stone], Phase] | Phase | str | None = getattr(state, "phase", None)
-
-    if callable(phase_attr):
-        return phase_attr(player)   # delivers (typed) Phase
-    
-    if isinstance(phase_attr, str): # attribute string
-        return _as_phase(phase_attr)
-    
-    phase_str = getattr(state, "phase_str", None)
-    if isinstance(phase_str, str):
-        return _as_phase(phase_str)
-    
-    # no silent failure: fallback to "unknown" to trigger ValueError
-    raise TypeError("GameState must provide phase information via method or attribute.")
 
 def phase_for(state: GameState, player: Stone) -> Phase:
     """
-    Öffentliche API.
-    Wrapper um _phase_for(), damit andere Module nicht an private Helper gekoppelt sind.
+    Oeffentliche API.
+    Wrapper um resolve_phase(), damit andere Module nicht an private Helper gekoppelt sind.
     """
-    return _phase_for(state, player)
+    return resolve_phase(state, player)
 
 
 def mills_containing(pos: int) -> List[Tuple[int, int, int]]:

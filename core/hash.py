@@ -2,41 +2,17 @@
 from __future__ import annotations
 
 import hashlib
-from typing import Callable, List, Sequence, Tuple, cast
+from typing import List, Sequence, cast
 
 from .graph import SYMMETRY_MAPS
-from .state import GameState, Phase, Stone
+from .state import GameState, Phase, Stone, resolve_phase
 
 __all__ = [
     "position_key_from_state",
     "position_key_with_symmetry",
 ]
 
-PHASE_STRS: Tuple[str, str, str] = ("placing", "moving", "flying")
 BoardVal = int | Stone
-
-
-def _as_phase(val: str) -> Phase:
-    if val in PHASE_STRS:
-        return cast(Phase, val)
-    raise ValueError(f"Unknown phase string: {val!r}")
-
-
-def _phase_for(state: GameState, player: Stone) -> Phase:
-    """Best effort: supports both method-based and attribute-based phase."""
-    phase_attr: Callable[[Stone], Phase] | Phase | str | None = getattr(state, "phase", None)
-
-    if callable(phase_attr):
-        return phase_attr(player)
-
-    if isinstance(phase_attr, str):
-        return _as_phase(phase_attr)
-
-    phase_str = getattr(state, "phase_str", None)
-    if isinstance(phase_str, str):
-        return _as_phase(phase_str)
-
-    raise TypeError("GameState must provide phase information via method or attribute.")
 
 
 def position_key_from_state(state: GameState) -> int:
@@ -47,7 +23,7 @@ def position_key_from_state(state: GameState) -> int:
     board_seq = _board_seq_from_state(state)
     to_move = cast(Stone, getattr(state, "to_move"))
     pending_remove = bool(getattr(state, "pending_remove", False))
-    phase = _phase_for(state, to_move)
+    phase = resolve_phase(state, to_move)
 
     return _position_key_from_board(board_seq, to_move, phase, pending_remove)
 
@@ -59,7 +35,7 @@ def position_key_with_symmetry(state: GameState) -> int:
     board_seq = _board_seq_from_state(state)
     to_move = cast(Stone, getattr(state, "to_move"))
     pending_remove = bool(getattr(state, "pending_remove", False))
-    phase = _phase_for(state, to_move)
+    phase = resolve_phase(state, to_move)
 
     best_key = _position_key_from_board(board_seq, to_move, phase, pending_remove)
     for mapping in SYMMETRY_MAPS:
