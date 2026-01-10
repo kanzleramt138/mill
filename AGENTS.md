@@ -22,12 +22,15 @@ Dieses Repo implementiert ƒ?zMÇ¬hleƒ?o (Nine Men's Morris) als Streamlit-App
 - wendet fertige Aktionen deterministisch an
 
 ## Dateien & Verantwortlichkeiten
-- `core/state.py`: DomÇÏnenmodell (`GameState`, `Stone`, helpers). Kein Streamlit.
+- `core/state.py`: DomÇÏnenmodell (`GameState`, `Stone`, phase-helpers). Kein Streamlit.
 - `core/graph.py`: Konstanten (`NEIGHBORS`, `MILLS`, Positionen).
 - `core/rules.py`: Regel-Engine (Legal moves, mills, remove, end conditions). Bevorzugt pure functions.
+- `core/hash.py`: Deterministisches Hashing (Position-Keys, Symmetrie-Kanonisierung).
 - `core/analysis.py`: Read-only Analyse/Heuristik/Planung (kein State-Mutieren).
 - `ui/board_svg.py`: SVG Rendering (keine Regel-Logik erzwingen).
 - `ui/board_component.py`: Component bridge + Event-Typing.
+- `engine/search.py`: Suche (Minimax/Alpha-Beta, Iterative Deepening, TT, PV/Top-N).
+- `engine/eval.py`: Bewertung (Score + Breakdown).
 - `engine/report.py`: Engine-Fassade fuer read-only Analyse/Overlays (Threats, Mobility, Kandidaten).
 - `ui/`: UI-Fassade (Re-Exports fuer Board/History/Notation/UI-Helper).
 - `muehle_board_component/`: Frontend (static). Keine ESM `import/export` verwenden, auÇYer es gibt ein Build (`dist/`/`build/`).

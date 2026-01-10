@@ -7,6 +7,11 @@ Eine Streamlit-App für „Mühle“ mit:
 - interaktivem Board via Streamlit Custom Component (Frontend)
 - stabiler Event-/Action-Pipeline (UI → Action → State Transition → UI)
 
+## Zielbild & Prioritaeten
+- Primaer: Lernen & Analyse (Erklaerbarkeit, Why-Panel, Taktik-Hints).
+- Sekundaer: spielstarker Computergegner (deterministisch, testbar, erweiterbar).
+- Konsequenz: klassische Suche (Minimax + Alpha-Beta) statt ML/RL.
+
 ---
 
 ## Repository-Struktur (Ist-Zustand)
@@ -49,6 +54,11 @@ Eine Streamlit-App für „Mühle“ mit:
 **Leitlinie:** Pure Functions bevorzugen:
 `apply_action(state, action) -> new_state`
 
+### `core/hash.py`
+**Rolle:** Deterministisches Hashing / Symmetrie-Kanonisierung.
+- `position_key_from_state(...)` (Repetition/Draw)
+- `position_key_with_symmetry(...)` (TT: score-only symmetrisch)
+
 ### `core/history.py`
 **Rolle:** Undo/Redo-History (immutable).
 - `History(past, future)` als Snapshot-Stacks
@@ -66,6 +76,13 @@ Eine Streamlit-App für „Mühle“ mit:
 - Mobility (pro Stein, blockierte Steine, Profile)
 - Light-Evaluation (`evaluate_light`)
 - Kandidatenzüge (`scored_actions_for_to_move`)
+
+### `engine/search.py`
+**Rolle:** Suche (Minimax/Alpha-Beta, Iterative Deepening, TT).
+- liefert PV + Top-N + Score
+
+### `engine/eval.py`
+**Rolle:** Bewertung (Score + Breakdown).
 
 ### `engine/report.py`
 **Rolle:** Engine-Fassade fuer read-only Analyse/Overlays.
@@ -111,6 +128,16 @@ Eine Streamlit-App für „Mühle“ mit:
 
 ---
 
+## Engine-Design (Kurz)
+- Suche: Minimax + Alpha-Beta, Iterative Deepening, TT, Move Ordering (Muehle/Capture/Block/TT-best).
+- API: engine.analyze(...) / engine.best_move(...) -> AnalysisResult (Best Move, Depth, Nodes, PV, Top-N, Breakdown, Threat-Report).
+- Eval: Tier-1 (Material, Mobility, Mills, Open Mills, Mill-in-1, Blocked).
+- Eval: Tier-2 (Double Threats, Initiative, Connectivity) mit Breakdown + Diff.
+- Why-Panel: Top-N, Klassifikation (loss), PV-Satz ("Wenn du X, dann Y, dann Z").
+- Symmetrien: kanonische Hashes, TT symmetrisch nur score-only.
+- Move-Handling: Ply ist Composite (place/move/fly inkl. optionalem remove).
+
+
 ## Qualitätsziele / Prinzipien
 - Regeln sind testbar (pytest), deterministisch, ohne Streamlit.
 - Rendering ist getrennt von Regeln.
@@ -121,7 +148,7 @@ Eine Streamlit-App für „Mühle“ mit:
 ---
 
 ## Nächste Schritte (Empfehlung)
-1. Analyse-/Overlay-Feinschliff (z. B. Mobility/Blocked-Overlay im Board)
-2. Kleine Suche skizzieren: „forced mills“ (ohne KI-Suche als Engine-Feature)
-3. `ActionEvent` Typing/Guards weiter härten (Event-Keys + Nonce)
-4. Optional: Frontend-Build (dist/build) statt „static“, falls ESM/Bundling nötig wird
+1. Eval-Tuning (Initiative-Gewichte, Phasen-Skalierung).
+2. UI-Feinschliff (Why-Panel/Hint-Labels, Legenden, Lesbarkeit).
+3. Search-Feintuning (TT-Groesse, Ordering-Heuristiken, Limits).
+4. Optional: Frontend-Build (dist/build) falls ESM/Bundling noetig wird.

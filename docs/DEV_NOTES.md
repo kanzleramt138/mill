@@ -92,6 +92,15 @@ und dann Hard-Reload: **Ctrl+F5**.
 - UI (Streamlit) nur in `ui/streamlit_app.py` und `ui/ui.py` (app.py ist Wrapper)
 - `ActionEvent` typisieren als **discriminated union** nach `kind`
 
+## Engine-Design (Kurzfassung)
+- Suche: Minimax + Alpha-Beta, Iterative Deepening, TT, Move Ordering.
+- API: engine.analyze(...) / engine.best_move(...) -> AnalysisResult (Best Move, Depth, Nodes, PV, Top-N, Breakdown, Threat-Report).
+- TT-Symmetrie: kanonische Hashes, symmetrische Treffer nur score-only (kein Best-Move).
+- Eval: Tier-1 (Material, Mobility, Mills, Open Mills, Mill-in-1, Blocked).
+- Eval: Tier-2 (Double Threats, Initiative, Connectivity).
+- Why-Panel: Top-N + Klassifikation (loss) + PV-Satz + Breakdown-Diff.
+- Move-Handling: Ply ist Composite (place/move/fly inkl. optionalem remove).
+
 ## Analyse / Overlays (read-only)
 - TODO: tune initiative weights and consider phase-specific scaling (placing vs moving/flying).
 
