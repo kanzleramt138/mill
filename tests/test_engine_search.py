@@ -54,6 +54,8 @@ def test_evaluate_breakdown_includes_mills_keys() -> None:
 
     assert "mills" in breakdown
     assert "open_mills" in breakdown
+    assert "double_threats" in breakdown
+    assert "connectivity" in breakdown
 
 
 def test_analyze_returns_top_moves_with_pv() -> None:

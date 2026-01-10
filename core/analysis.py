@@ -35,60 +35,69 @@ def _effective_phase(state: GameState, player: Stone) -> Phase:
     return "moving"
 
 
-def compute_threat_squares(state: GameState, player: Stone, *, use_fallback: bool = True) -> Set[int]:
-    """
-    Felder, auf denen der `player` im nächsten Zug eine Mühle schließen kann
-    (= offene Mühlen von `player`).
-    
-    Args:
-        state: Der aktuelle Spielzustand
-        player: Spieler, für den die Drohfelder berechnet werden
-        use_fallback: Wenn True und der Spieler hat keine Drohungen, werden die 
-                      Drohungen des Gegners zurückgegeben (für Defensive-Overlay).
-                      Wenn False, wird immer ein leeres Set zurückgegeben, wenn der 
-                      Spieler keine Drohungen hat (für Mill-in-1-Analyse).
-    """
+def _threat_counts(state: GameState, player: Stone) -> Dict[int, int]:
     board = state.board
     empties = set(_empty_positions(board))
+    cand: dict[int, int] = {}
+    for a, b, c in MILLS:
+        vals = (board[a], board[b], board[c])
+        occ = [i for i, v in zip((a, b, c), vals) if int(v) == int(player)]
+        emp = [i for i, v in zip((a, b, c), vals) if int(v) == int(Stone.EMPTY)]
+        if len(occ) == 2 and len(emp) == 1:
+            pos = emp[0]
+            if pos in empties:
+                cand.setdefault(pos, 0)
+                cand[pos] += 1
 
-    def _threats_for(color: Stone) -> Set[int]:
-        cand: dict[int, int] = {}
-        for a, b, c in MILLS:
-            vals = (board[a], board[b], board[c])
-            occ = [i for i, v in zip((a, b, c), vals) if int(v) == int(color)]
-            emp = [i for i, v in zip((a, b, c), vals) if int(v) == int(Stone.EMPTY)]
-            if len(occ) == 2 and len(emp) == 1:
-                pos = emp[0]
-                if pos in empties:
-                    cand.setdefault(pos, 0)
-                    cand[pos] += 1
+    if not cand:
+        return {}
 
-        if not cand:
-            return set()
-        
-        ph = _effective_phase(state, color)
-        positions = _positions_of(board, color)
-        res: Set[int] = set()
-        for pos in cand:
-            if ph == "placing":
-                res.add(pos)
-            elif ph == "flying":
-                if positions:
-                    # kann von allen Steinen fliegen
-                    res.add(pos)
-            else:
-                # moving: nur wenn ein Stein eine Verbindung zum Ziel hat
-                for src in NEIGHBORS.get(pos, []):
-                    if int(board[src]) == int(color):
-                        res.add(pos)
-                        break
-        return res
-    
-    threatened = _threats_for(player)
+    ph = _effective_phase(state, player)
+    positions = _positions_of(board, player)
+    res: Dict[int, int] = {}
+    for pos, count in cand.items():
+        if ph == "placing":
+            res[pos] = count
+        elif ph == "flying":
+            if positions:
+                # kann von allen Steinen fliegen
+                res[pos] = count
+        else:
+            # moving: nur wenn ein Stein eine Verbindung zum Ziel hat
+            for src in NEIGHBORS.get(pos, []):
+                if int(board[src]) == int(player):
+                    res[pos] = count
+                    break
+    return res
+
+
+def compute_threat_squares(state: GameState, player: Stone, *, use_fallback: bool = True) -> Set[int]:
+    """
+    Felder, auf denen der `player` im naechsten Zug eine Muehle schliessen kann
+    (= offene Muehlen von `player`).
+
+    Args:
+        state: Der aktuelle Spielzustand
+        player: Spieler, fuer den die Drohfelder berechnet werden
+        use_fallback: Wenn True und der Spieler hat keine Drohungen, werden die
+                      Drohungen des Gegners zurueckgegeben (fuer Defensive-Overlay).
+                      Wenn False, wird immer ein leeres Set zurueckgegeben, wenn der
+                      Spieler keine Drohungen hat (fuer Mill-in-1-Analyse).
+    """
+    threatened = set(_threat_counts(state, player))
     if not threatened and use_fallback:
-        # Fallback: auch Gegner prüfen (für Defensive-Overlay/Tests)
-        threatened = _threats_for(opponent(player))
+        # Fallback: auch Gegner pruefen (fuer Defensive-Overlay/Tests)
+        threatened = set(_threat_counts(state, opponent(player)))
     return threatened
+
+
+def double_threat_squares(state: GameState, player: Stone) -> Set[int]:
+    """
+    Felder, auf denen der `player` zwei (oder mehr) Muehlen auf einmal schliessen kann.
+    """
+    counts = _threat_counts(state, player)
+    return {pos for pos, count in counts.items() if count >= 2}
+
 
 def mobility_by_pos(state: GameState, player: Stone) -> Dict[int, int]:
     """

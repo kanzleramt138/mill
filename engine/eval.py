@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Tuple
 
-from core.analysis import blocked_stones, compute_threat_squares, mobility_score
-from core.graph import MILLS
+from core.analysis import blocked_stones, compute_threat_squares, double_threat_squares, mobility_score
+from core.graph import MILLS, NEIGHBORS
 from core.state import GameState, Stone, opponent
 
 from .types import EvalBreakdown, EvalWeights
@@ -22,6 +22,8 @@ def evaluate(state: GameState, player: Stone, weights: EvalWeights | None = None
     w_mob = weights.mobility
     w_thr = weights.threats_mill_in_1
     w_blk = weights.blocked_opponent
+    w_double = weights.double_threats
+    w_conn = weights.connectivity
 
     mat = state.stones_on_board(player) - state.stones_on_board(opp)
     mills = _count_mills(state, player) - _count_mills(state, opp)
@@ -29,6 +31,8 @@ def evaluate(state: GameState, player: Stone, weights: EvalWeights | None = None
     mob = mobility_score(state, player) - mobility_score(state, opp)
     thr = len(compute_threat_squares(state, opp, use_fallback=False)) - len(compute_threat_squares(state, player, use_fallback=False))
     blk = len(blocked_stones(state, opp)) - len(blocked_stones(state, player))
+    double_thr = len(double_threat_squares(state, player)) - len(double_threat_squares(state, opp))
+    conn = _connectivity_score(state, player) - _connectivity_score(state, opp)
 
     breakdown: EvalBreakdown = {
         "material": w_mat * mat,
@@ -37,6 +41,8 @@ def evaluate(state: GameState, player: Stone, weights: EvalWeights | None = None
         "mobility": w_mob * mob,
         "threats_mill_in_1": w_thr * thr,
         "blocked_opponent": w_blk * blk,
+        "double_threats": w_double * double_thr,
+        "connectivity": w_conn * conn,
     }
 
     score = (
@@ -46,6 +52,8 @@ def evaluate(state: GameState, player: Stone, weights: EvalWeights | None = None
         + breakdown["mobility"]
         + breakdown["threats_mill_in_1"]
         + breakdown["blocked_opponent"]
+        + breakdown["double_threats"]
+        + breakdown["connectivity"]
     )
     return score, breakdown
 
@@ -69,3 +77,11 @@ def _count_mills(state: GameState, player: Stone) -> int:
         if board[a] == board[b] == board[c] == player:
             count += 1
     return count
+
+
+def _connectivity_score(state: GameState, player: Stone) -> int:
+    total = 0
+    for idx, stone in enumerate(state.board):
+        if stone == player:
+            total += len(NEIGHBORS[idx])
+    return total

@@ -293,6 +293,10 @@ def sidebar_controls() -> None:
         st.session_state.w_threats_mill_in_1 = 2.0
     if "w_blocked_opponent" not in st.session_state:
         st.session_state.w_blocked_opponent = 0.5
+    if "w_double_threats" not in st.session_state:
+        st.session_state.w_double_threats = 1.0
+    if "w_connectivity" not in st.session_state:
+        st.session_state.w_connectivity = 0.5
 
     st.sidebar.number_input("Material", min_value=0.0, max_value=20.0, step=0.5, key="w_material")
     st.sidebar.number_input("Mills", min_value=0.0, max_value=20.0, step=0.5, key="w_mills")
@@ -300,6 +304,8 @@ def sidebar_controls() -> None:
     st.sidebar.number_input("Mobility", min_value=0.0, max_value=10.0, step=0.5, key="w_mobility")
     st.sidebar.number_input("Threats (Mill-in-1)", min_value=0.0, max_value=10.0, step=0.5, key="w_threats_mill_in_1")
     st.sidebar.number_input("Blocked Opponent", min_value=0.0, max_value=10.0, step=0.5, key="w_blocked_opponent")
+    st.sidebar.number_input("Double Threats", min_value=0.0, max_value=10.0, step=0.5, key="w_double_threats")
+    st.sidebar.number_input("Connectivity", min_value=0.0, max_value=10.0, step=0.5, key="w_connectivity")
 
     st.sidebar.subheader("Why Panel")
     if "class_best_max" not in st.session_state:
@@ -518,6 +524,8 @@ def render_analysis_panel(state: GameState) -> None:
                 mobility=float(st.session_state.get("w_mobility", 1.0)),
                 threats_mill_in_1=float(st.session_state.get("w_threats_mill_in_1", 2.0)),
                 blocked_opponent=float(st.session_state.get("w_blocked_opponent", 0.5)),
+                double_threats=float(st.session_state.get("w_double_threats", 1.0)),
+                connectivity=float(st.session_state.get("w_connectivity", 0.5)),
             )
             cache_key = (
                 position_key_from_state(state),
@@ -532,6 +540,8 @@ def render_analysis_panel(state: GameState) -> None:
                     weights.mobility,
                     weights.threats_mill_in_1,
                     weights.blocked_opponent,
+                    weights.double_threats,
+                    weights.connectivity,
                 ),
                 int(state.to_move),
             )

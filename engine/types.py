@@ -27,6 +27,8 @@ class EvalBreakdown(TypedDict, total=False):
     open_mills: float
     threats_mill_in_1: float
     blocked_opponent: float
+    double_threats: float
+    connectivity: float
 
 @dataclass(frozen=True)
 class ThreatReport:
@@ -65,3 +67,5 @@ class EvalWeights:
     mobility: float = 1.0
     threats_mill_in_1: float = 2.0
     blocked_opponent: float = 0.5
+    double_threats: float = 1.0
+    connectivity: float = 0.5
