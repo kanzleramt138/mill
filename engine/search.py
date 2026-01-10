@@ -11,7 +11,7 @@ from mill.state import GameState, Stone
 
 from .eval import evaluate
 from .movegen import apply_ply, legal_plies
-from .types import AnalysisResult, Limits, Ply, ScoredMove, EvalWeights
+from .types import AnalysisResult, Limits, Ply, ScoredMove, EvalBreakdown, EvalWeights
 
 MATE_SCORE = 1_000_000.0
 DEFAULT_TOP_N_MOVES = 5
@@ -179,36 +179,38 @@ def _negamax_root(
     plies = _order_plies(state, legal_plies(state), prev_best)
     best_score = float("-inf")
     best_pv: List[Ply] = []
+    scored_raw: List[Tuple[Ply, float, List[Ply], EvalBreakdown]] = []
     scored: List[ScoredMove] = []
     for ply in plies:
         nxt = apply_ply(state, ply)
         _, breakdown = evaluate(nxt, ctx.for_player, ctx.eval_weights)
         score, child_pv, stopped = _negamax(nxt, depth - 1, -beta, -alpha, -color, ctx)
         if stopped:
-            return best_score, best_pv, scored, True
+            return best_score, best_pv, [], True
         score = -score
-        scored.append(ScoredMove(ply=ply, score=score, pv=[ply] + child_pv, breakdown=breakdown))
+
+        _, breakdown = evaluate(nxt, ctx.for_player, ctx.eval_weights)
+        scored_raw.append((ply, score, [ply] + child_pv, breakdown))
+
         if score > best_score:
             best_score = score
             best_pv = [ply] + child_pv
         if score > alpha:
             alpha = score
-    scored.sort(key=lambda s: s.score, reverse=True)
-    if scored:
-        best_breakdown = scored[0].breakdown
-        scored = [
+    best_breakdown = _best_breakdown(scored_raw)
+    scored: List[ScoredMove] = []
+    for ply, score, pv, breakdown in scored_raw:
+        scored.append(
             ScoredMove(
-                ply=sm.ply,
-                score=sm.score,
-                pv=sm.pv,
-                breakdown=sm.breakdown,
-                breakdown_diff={
-                    key: sm.breakdown.get(key, 0.0) - best_breakdown.get(key, 0.0)
-                    for key in set(best_breakdown.keys()) | set(sm.breakdown.keys())
-                },
+                ply=ply,
+                score=score,
+                pv=pv,
+                breakdown=breakdown,
+                breakdown_diff=_diff_breakdowns(best_breakdown, breakdown),
             )
-            for sm in scored
-        ]
+        )
+    scored.sort(key=lambda s: s.score, reverse=True)
+    
     return best_score, best_pv, scored[:top_n], False
 
 
@@ -388,3 +390,15 @@ def _should_stop(ctx: _SearchContext) -> bool:
 
 def _is_valid_state(state: object) -> bool:
     return hasattr(state, "to_move") and hasattr(state, "board")
+
+
+def _best_breakdown(scored_raw: List[Tuple[Ply, float, List[Ply], EvalBreakdown]]) -> EvalBreakdown:
+    if not scored_raw:
+        return {}
+    best = max(scored_raw, key=lambda item: item[1])
+    return best[3]
+
+
+def _diff_breakdowns(best: EvalBreakdown, other: EvalBreakdown) -> EvalBreakdown:
+    keys = set(best) | set(other)
+    return {key: best.get(key, 0.0) - other.get(key, 0.0) for key in keys}

@@ -30,7 +30,8 @@ from mill.analysis import (
     tactic_hints_for_ply,
 )
 
-from engine import analyze, AnalysisResult, EvalWeights, Limits, score_ply
+from engine import analyze, AnalysisResult, EvalWeights, Limits, classify_move_loss, score_ply
+
 from engine.movegen import apply_ply, legal_plies
 from mill.rules import position_key_from_state
 
@@ -379,6 +380,7 @@ def _render_tactic_hints(state: GameState, ply) -> None:
         st.markdown("\n".join(f"- {b}" for b in bullets))
 
 
+
 def _find_transition_ply(prev_state: GameState, next_state: GameState):
     for ply in legal_plies(prev_state):
         try:
@@ -570,7 +572,7 @@ def render_analysis_panel(state: GameState) -> None:
                 best_score = result.score
                 for sm in result.top_moves:
                     loss = max(0.0, best_score - sm.score)
-                    label = _classify_move_loss(loss, thresholds)
+                    label = classify_move_loss(loss, thresholds)
                     st.write("%s: %.2f (loss %.2f, %s)" % (_format_ply(sm.ply), sm.score, loss, label))
                     if sm.breakdown:
                         st.write(f"  Breakdown: {_format_breakdown(sm.breakdown)}")
@@ -643,7 +645,7 @@ def render_analysis_panel(state: GameState) -> None:
                         st.write(f"Last move: {_format_ply(last_ply)} (not in Top-N)")
                     else:
                         last_loss = max(0.0, last_result.score - last_score)
-                        last_label = _classify_move_loss(last_loss, thresholds)
+                        last_label = classify_move_loss(last_loss, thresholds)
                         st.write(
                             "Last move: %s (score %.2f, loss %.2f, %s)"
                             % (_format_ply(last_ply), last_score, last_loss, last_label)
