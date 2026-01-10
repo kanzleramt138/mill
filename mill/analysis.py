@@ -289,8 +289,8 @@ def tactic_hints_for_ply(state: GameState, ply: Ply) -> Dict[str, object]:
     player = state.to_move
     opp = opponent(player)
 
-    threats_before_self = compute_threat_squares(state, player)
-    threats_before_opp = compute_threat_squares(state, opp)
+    threats_before_self = compute_threat_squares(state, player, use_fallback=False)
+    threats_before_opp = compute_threat_squares(state, opp, use_fallback=False)
 
     used_threat_square = None
     if ply.kind in ("place", "move", "fly") and ply.dst is not None:
@@ -302,7 +302,7 @@ def tactic_hints_for_ply(state: GameState, ply: Ply) -> Dict[str, object]:
         missed_mill_in_1 = True
 
     next_state = apply_ply(state, ply)
-    threats_after_opp = compute_threat_squares(next_state, opp)
+    threats_after_opp = compute_threat_squares(next_state, opp, use_fallback=False)
     new_opp_threats = threats_after_opp - threats_before_opp
 
     blocked_white = blocked_stones(next_state, Stone.WHITE)

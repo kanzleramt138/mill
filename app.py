@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import streamlit as st
 import time
+from typing import Mapping
 
 from mill.rules import (
     Action,
@@ -30,7 +31,7 @@ from mill.analysis import (
     tactic_hints_for_ply,
 )
 
-from engine import analyze, AnalysisResult, EvalWeights, Limits, classify_move_loss, score_ply
+from engine import analyze, AnalysisResult, EvalBreakdown, EvalWeights, Limits, classify_move_loss, score_ply
 from engine.movegen import apply_ply, legal_plies
 from mill.rules import position_key_from_state
 
@@ -329,19 +330,6 @@ def _format_ply(ply) -> str:
     return base
 
 
-def _classify_move_loss(delta: float, thresholds: dict[str, float]) -> str:
-    """Classify a move by score loss vs. best move (lower is better)."""
-    if delta <= thresholds["best"]:
-        return "Best"
-    if delta <= thresholds["good"]:
-        return "Good"
-    if delta <= thresholds["inaccuracy"]:
-        return "Inaccuracy"
-    if delta <= thresholds["mistake"]:
-        return "Mistake"
-    return "Blunder"
-
-
 def _label_marker(label: str) -> str:
     markers = {
         "Best": "✅",
@@ -364,16 +352,16 @@ def _render_why_legend(thresholds: dict[str, float]) -> None:
     mistake = thresholds["mistake"]
     st.markdown("**Legende (Why Panel)**")
     st.markdown(
-        "- **loss / Δ zum Best‑Move**: Score‑Abstand zum besten Zug "
-        "(best_score − move_score, min. 0)."
+        "- **loss / delta zum Best-Move**: Score-Abstand zum besten Zug "
+        "(best_score - move_score, min. 0)."
     )
     st.markdown(
         "\n".join(
             [
-                f"- {_format_class_label('Best')}: loss ≤ {best:.2f}",
-                f"- {_format_class_label('Good')}: loss ≤ {good:.2f}",
-                f"- {_format_class_label('Inaccuracy')}: loss ≤ {inaccuracy:.2f}",
-                f"- {_format_class_label('Mistake')}: loss ≤ {mistake:.2f}",
+                f"- {_format_class_label('Best')}: loss <= {best:.2f}",
+                f"- {_format_class_label('Good')}: loss <= {good:.2f}",
+                f"- {_format_class_label('Inaccuracy')}: loss <= {inaccuracy:.2f}",
+                f"- {_format_class_label('Mistake')}: loss <= {mistake:.2f}",
                 f"- {_format_class_label('Blunder')}: loss > {mistake:.2f}",
             ]
         )
@@ -447,7 +435,7 @@ def _format_pv_sentence(pv) -> str:
   
 
 def _format_breakdown(
-    breakdown: dict[str, float],
+    breakdown: Mapping[str, float] | EvalBreakdown,
     *,
     only_non_zero: bool = False,
     signed: bool = False,
@@ -505,7 +493,7 @@ def render_analysis_panel(state: GameState) -> None:
                 for act, score in scored_actions_for_to_move(state, max_candidates=5):
                     nota = action_to_notation(act, before=state)
                     delta = score - base_eval
-                    st.write(f"  {nota}: {score:.2f} (Δ {delta:+.2f})")
+                    st.write(f"  {nota}: {score:.2f} (delta {delta:+.2f})")
 
             st.markdown("---")
 
@@ -614,7 +602,7 @@ def render_analysis_panel(state: GameState) -> None:
                     if sm.breakdown_diff:
                         diff_line = _format_breakdown(sm.breakdown_diff, only_non_zero=True, signed=True)
                         if diff_line != "-":
-                            st.write(f"  Δ zum Best-Move: {diff_line}")
+                            st.write(f"  Diff zum Best-Move: {diff_line}")
                     if sm.pv:
                         st.write(_format_pv_sentence(sm.pv))
                         st.code(_format_pv(sm.pv), language="text")
@@ -652,7 +640,7 @@ def render_analysis_panel(state: GameState) -> None:
                             for_player=prev_state.to_move,
                         )
                     last_loss = max(0.0, last_result.score - last_score)
-                    last_label = _classify_move_loss(last_loss, thresholds)
+                    last_label = classify_move_loss(last_loss, thresholds)
                     suffix = " (not in Top-N)" if not_in_top_n else ""
                     st.write(
                         "Last move: %s (score %.2f, loss %.2f, %s)%s"
@@ -660,36 +648,6 @@ def render_analysis_panel(state: GameState) -> None:
                     )
                     if last_pv:
                         st.code(_format_pv(last_pv), language="text")
-                    last_result = analyze(
-                        prev_state,
-                        limits=Limits(
-                            max_depth=depth,
-                            time_ms=time_ms,
-                            top_n=top_n,
-                            use_tt=use_tt,
-                            eval_weights=weights,
-                        ),
-                        for_player=prev_state.to_move,
-                    )
-                    last_score = None
-                    for sm in last_result.top_moves:
-                        if sm.ply == last_ply:
-                            last_score = sm.score
-                            break
-                    if last_score is None:
-                        st.write(f"Last move: {_format_ply(last_ply)} (not in Top-N)")
-                    else:
-                        last_loss = max(0.0, last_result.score - last_score)
-                        last_label = _classify_move_loss(last_loss, thresholds)
-                        st.markdown(
-                            "Last move: %s (score %.2f, loss %.2f, %s)"
-                            % (
-                                _format_ply(last_ply),
-                                last_score,
-                                last_loss,
-                                _format_class_label(last_label),
-                            )
-                        )
 
 
 def main() -> None:

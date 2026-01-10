@@ -242,3 +242,20 @@ def test_tactic_hints_no_threats_available() -> None:
     assert hints["missed_mill_in_1"] is False
     assert hints["used_threat_square"] is None
     assert len(hints["missed_threats"]) == 0
+
+def test_tactic_hints_no_fallback_on_opponent_threats() -> None:
+    """Test: keine false missed_mill_in_1 durch Gegner-Threats."""
+    base = GameState.initial()
+    board = list(base.board)
+
+    mill_a, mill_b, mill_c = MILLS[0]
+    board[mill_a] = Stone.BLACK
+    board[mill_b] = Stone.BLACK
+
+    state = _state_with_board(board, to_move=Stone.WHITE, in_hand_white=1)
+    ply = Ply(kind="place", dst=10)
+
+    hints = tactic_hints_for_ply(state, ply)
+
+    assert hints["missed_mill_in_1"] is False
+    assert len(hints["missed_threats"]) == 0
