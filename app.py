@@ -21,17 +21,19 @@ from mill.board_svg import render_board_svg, POS
 from mill.board_component import muehle_board
 from mill.history import History
 from mill.notation import action_to_notation, pos_label
-from mill.analysis import (
-    compute_threat_squares,
-    mobility_score,
-    mobility_profile,
-    blocked_stones,
-    scored_actions_for_to_move,
+from engine import (
+    analyze,
+    AnalysisResult,
+    EvalBreakdown,
+    EvalWeights,
+    Limits,
+    build_analysis_overlay,
+    classify_move_loss,
     evaluate_light,
+    score_ply,
     tactic_hints_for_ply,
+    threat_overlay_targets,
 )
-
-from engine import analyze, AnalysisResult, EvalBreakdown, EvalWeights, Limits, classify_move_loss, score_ply
 from engine.movegen import apply_ply, legal_plies
 from mill.rules import position_key_from_state
 
@@ -76,7 +78,7 @@ def render_svg_board_interactive(state: GameState) -> None:
     # shows player's own threats for awareness
     threat_targets: set[int] = set()
     if st.session_state.get("threat_overlay", False) and not game_finished:
-        threat_targets = compute_threat_squares(state, opponent(state.to_move))
+        threat_targets = threat_overlay_targets(state)
 
     # removables list only needed for validation and optional hint rendering
     victim_removables = []
@@ -465,14 +467,14 @@ def render_analysis_panel(state: GameState) -> None:
             or is_terminal(state)
         )
 
-        base_eval_white = evaluate_light(state, Stone.WHITE)
-        base_eval_black = evaluate_light(state, Stone.BLACK)
+        overlay = build_analysis_overlay(state, max_candidates=5)
 
         for player in (Stone.WHITE, Stone.BLACK):
-            threats = compute_threat_squares(state, player, use_fallback=False)
-            mobility = mobility_score(state, player)
-            blocked = blocked_stones(state, player)
-            profile = mobility_profile(state, player)
+            player_overlay = overlay.white if player == Stone.WHITE else overlay.black
+            threats = player_overlay.threats
+            mobility = player_overlay.mobility
+            blocked = player_overlay.blocked
+            profile = player_overlay.profile
 
             st.markdown(f"**{player_label(player)}**")
             st.write(f"Threat-Squares: {_format_positions(threats)}")
@@ -489,11 +491,9 @@ def render_analysis_panel(state: GameState) -> None:
             # einfache Zug-Vorschau nur für side-to-move
             if player == state.to_move:
                 st.write("Kandidatenzüge (Heuristik):")
-                base_eval = base_eval_white if player == Stone.WHITE else base_eval_black
-                for act, score in scored_actions_for_to_move(state, max_candidates=5):
-                    nota = action_to_notation(act, before=state)
-                    delta = score - base_eval
-                    st.write(f"  {nota}: {score:.2f} (delta {delta:+.2f})")
+                for cand in overlay.candidates:
+                    nota = action_to_notation(cand.action, before=state)
+                    st.write(f"  {nota}: {cand.score:.2f} (delta {cand.delta:+.2f})")
 
             st.markdown("---")
 
