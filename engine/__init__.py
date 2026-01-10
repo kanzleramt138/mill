@@ -19,10 +19,10 @@ from core.rules import (
     draw_reason,
     is_terminal,
     legal_actions,
-    position_key_from_state,
     removable_positions,
     winner,
 )
+from core.hash import position_key_from_state
 from core.state import GameState, Stone, opponent
 
 

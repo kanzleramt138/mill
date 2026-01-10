@@ -6,7 +6,7 @@ from typing import Dict, List, Optional, Tuple, Literal
 
 from core.graph import MILLS
 from core.rules import draw_reason, forms_mill_after_placement, winner
-from core.rules import position_key_from_state, position_key_with_symmetry
+from core.hash import position_key_from_state, position_key_with_symmetry
 from core.analysis import compute_threat_squares
 from core.state import GameState, Stone
 

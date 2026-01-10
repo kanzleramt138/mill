@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from engine import Limits, analyze
 from core.graph import SYMMETRY_MAPS
-from core.rules import position_key_with_symmetry
+from core.hash import position_key_with_symmetry
 from core.state import GameState, Stone
 
 

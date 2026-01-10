@@ -6,9 +6,9 @@ from core.state import Stone, DrawTracker, GameState
 from core.rules import (
     advance_draw_tracker,
     draw_reason,
-    position_key_from_state,
     DRAW_NO_MILL_MOVES,
 )
+from core.hash import position_key_from_state
 
 
 @dataclass(frozen=True)

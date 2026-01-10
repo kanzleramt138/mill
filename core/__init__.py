@@ -8,7 +8,6 @@ from .rules import (
     phase_for,
     mills_containing,
     is_pos_in_mill,
-    position_key_from_state,
     advance_draw_tracker,
     draw_reason,
     forms_mill_after_placement,
@@ -19,6 +18,7 @@ from .rules import (
     winner,
     is_terminal,
 )
+from .hash import position_key_from_state
 
 __all__ = [
     # state
