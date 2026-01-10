@@ -12,9 +12,23 @@ from .report import (
     tactic_hints_for_ply,
     threat_overlay_targets,
 )
+from mill.rules import (
+    Action,
+    advance_draw_tracker,
+    apply_action,
+    draw_reason,
+    is_terminal,
+    legal_actions,
+    position_key_from_state,
+    removable_positions,
+    winner,
+)
+from mill.state import GameState, Stone, opponent
 
 
 __all__ = [
+    "Action",
+    "GameState",
     "Ply",
     "Limits",
     "AnalysisResult",
@@ -22,6 +36,10 @@ __all__ = [
     "ThreatReport",
     "ScoredMove",
     "EvalWeights",
+    "Stone",
+    "advance_draw_tracker",
+    "apply_action",
+    "draw_reason",
     "evaluate",
     "evaluate_light",
     "classify_move_loss",
@@ -29,6 +47,10 @@ __all__ = [
     "best_move",
     "score_ply",
     "legal_plies",
+    "legal_actions",
+    "is_terminal",
+    "opponent",
+    "position_key_from_state",
     "apply_ply",
     "AnalysisOverlay",
     "CandidateMove",
@@ -36,4 +58,6 @@ __all__ = [
     "build_analysis_overlay",
     "tactic_hints_for_ply",
     "threat_overlay_targets",
+    "removable_positions",
+    "winner",
 ]

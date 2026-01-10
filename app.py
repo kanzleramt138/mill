@@ -5,37 +5,43 @@ import streamlit as st
 import time
 from typing import Mapping
 
-from mill.rules import (
-    Action,
-    apply_action,
-    winner,
-    is_terminal,
-    legal_actions,
-    removable_positions,
-    advance_draw_tracker,
-    draw_reason,
-)
-from mill.state import GameState, Stone, opponent
-from mill.ui import ensure_ui_state, clear_selection
-from mill.board_svg import render_board_svg, POS
-from mill.board_component import muehle_board
-from mill.history import History
-from mill.notation import action_to_notation, pos_label
 from engine import (
+    Action,
     analyze,
     AnalysisResult,
     EvalBreakdown,
     EvalWeights,
+    GameState,
     Limits,
+    Stone,
+    advance_draw_tracker,
+    apply_action,
+    apply_ply,
     build_analysis_overlay,
     classify_move_loss,
+    draw_reason,
     evaluate_light,
+    is_terminal,
+    legal_actions,
+    legal_plies,
+    opponent,
+    position_key_from_state,
+    removable_positions,
     score_ply,
     tactic_hints_for_ply,
     threat_overlay_targets,
+    winner,
 )
-from engine.movegen import apply_ply, legal_plies
-from mill.rules import position_key_from_state
+from ui import (
+    POS,
+    History,
+    action_to_notation,
+    clear_selection,
+    ensure_ui_state,
+    muehle_board,
+    pos_label,
+    render_board_svg,
+)
 
 
 def compute_hints(state: GameState, selected_src: int | None, show_legal_targets: bool) -> tuple[set[int], set[int]]:
