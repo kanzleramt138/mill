@@ -7,11 +7,12 @@ from typing import Dict, List, Optional, Tuple, Literal
 from mill.graph import MILLS
 from mill.rules import draw_reason, forms_mill_after_placement, winner
 from mill.rules import position_key_from_state, position_key_with_symmetry
+from mill.analysis import compute_threat_squares
 from mill.state import GameState, Stone
 
 from .eval import evaluate
 from .movegen import apply_ply, legal_plies
-from .types import AnalysisResult, Limits, Ply, ScoredMove, EvalBreakdown, EvalWeights
+from .types import AnalysisResult, Limits, Ply, ScoredMove, EvalBreakdown, EvalWeights, ThreatReport
 
 MATE_SCORE = 1_000_000.0
 DEFAULT_TOP_N_MOVES = 5
@@ -54,6 +55,7 @@ def analyze(state: GameState, limits: Limits | None = None, for_player: Stone | 
             pv=[],
             top_moves=[],
             breakdown={},
+            threat_report=ThreatReport(for_player=set(), opponent=set()),
         )
 
     if limits is None:
@@ -95,6 +97,11 @@ def analyze(state: GameState, limits: Limits | None = None, for_player: Stone | 
         best_move = pv[0] if pv else None
 
     _, breakdown = evaluate(state, for_player, ctx.eval_weights)
+    opp = Stone.BLACK if for_player == Stone.WHITE else Stone.WHITE
+    threat_report = ThreatReport(
+        for_player=compute_threat_squares(state, for_player, use_fallback=False),
+        opponent=compute_threat_squares(state, opp, use_fallback=False),
+    )
     return AnalysisResult(
         best_move=best_move,
         score=best_score,
@@ -105,6 +112,7 @@ def analyze(state: GameState, limits: Limits | None = None, for_player: Stone | 
         pv=best_pv,
         top_moves=top_moves,
         breakdown=breakdown,
+        threat_report=threat_report,
     )
 
 

@@ -29,6 +29,11 @@ class EvalBreakdown(TypedDict, total=False):
     blocked_opponent: float
 
 @dataclass(frozen=True)
+class ThreatReport:
+    for_player: set[int]
+    opponent: set[int]
+
+@dataclass(frozen=True)
 class AnalysisResult:
     best_move: Optional[Ply]
     score: float
@@ -39,6 +44,7 @@ class AnalysisResult:
     pv: List[Ply]
     top_moves: List["ScoredMove"]
     breakdown: EvalBreakdown
+    threat_report: ThreatReport
 
 
 @dataclass(frozen=True)

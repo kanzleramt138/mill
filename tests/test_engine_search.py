@@ -4,6 +4,7 @@ from engine import Ply, Limits, analyze, best_move, classify_move_loss
 from engine.eval import evaluate
 from engine.movegen import legal_plies
 from engine.search import _order_plies
+from mill.graph import MILLS
 from mill.state import GameState, Stone
 
 
@@ -74,6 +75,27 @@ def test_analyze_returns_top_moves_with_pv() -> None:
     assert result.top_moves
     assert all(tm.ply in legal_plies(state) for tm in result.top_moves)
     assert all(tm.pv and tm.pv[0] == tm.ply for tm in result.top_moves)
+
+
+def test_analyze_includes_threat_report() -> None:
+    board = [Stone.EMPTY] * 24
+    a, b, c = MILLS[0]
+    board[a] = Stone.WHITE
+    board[b] = Stone.WHITE
+
+    state = GameState(
+        board=tuple(board),
+        to_move=Stone.WHITE,
+        in_hand_white=7,
+        in_hand_black=9,
+        pending_remove=False,
+        turn_no=1,
+    )
+
+    result = analyze(state, limits=Limits(max_depth=1), for_player=Stone.WHITE)
+
+    assert result.threat_report.for_player == {c}
+    assert result.threat_report.opponent == set()
 
 
 def test_classify_move_loss_thresholds() -> None:

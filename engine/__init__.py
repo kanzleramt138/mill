@@ -1,4 +1,4 @@
-from .types import Ply, Limits, AnalysisResult, EvalBreakdown, ScoredMove, EvalWeights
+from .types import Ply, Limits, AnalysisResult, EvalBreakdown, ScoredMove, EvalWeights, ThreatReport
 from .analysis_helpers import classify_move_loss
 from .eval import evaluate
 from .search import analyze, best_move, score_ply
@@ -19,6 +19,7 @@ __all__ = [
     "Limits",
     "AnalysisResult",
     "EvalBreakdown",
+    "ThreatReport",
     "ScoredMove",
     "EvalWeights",
     "evaluate",
