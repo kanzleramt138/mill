@@ -89,14 +89,14 @@ und dann Hard-Reload: **Ctrl+F5**.
 - `core/state.py`, `core/rules.py`, `core/graph.py` sind **streamlit-frei**
 - Regel-Logik als **pure functions**, z. B.:
   - `apply_action(state, action) -> new_state`
-- UI (Streamlit) nur in `app.py` und `ui/ui.py`
+- UI (Streamlit) nur in `ui/streamlit_app.py` und `ui/ui.py` (app.py ist Wrapper)
 - `ActionEvent` typisieren als **discriminated union** nach `kind`
 
 ## Analyse / Overlays (read-only)
 Aktuell gibt es ein bewusst leichtgewichtiges Analyse-Panel und ein Threat-Overlay.
 
 ### Analyse-Panel
-- Implementiert in `app.py` (`render_analysis_panel`), `engine/report.py` und `core/analysis.py`.
+- Implementiert in `ui/streamlit_app.py` (`render_analysis_panel`), `engine/report.py` und `core/analysis.py`.
 - UI: In der rechten Spalte als Expander „Analyse (aktuelle Stellung)“.
 - Inhalt (derzeit): Threat-Squares, Mobility (Score/Ø), blockierte Steine, Kandidatenzüge für `to_move`.
 

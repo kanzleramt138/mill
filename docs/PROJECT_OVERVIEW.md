@@ -11,12 +11,17 @@ Eine Streamlit-App für „Mühle“ mit:
 
 ## Repository-Struktur (Ist-Zustand)
 
-### `app.py`
+### `ui/streamlit_app.py`
 **Rolle:** Streamlit-Orchestrator.
 - initialisiert UI/Session-State
 - rendert Board-SVG über `ui/board_svg.py`
 - ruft Custom Component `muehle_board(...)` auf
 - übersetzt Click-Events in `Action` und wendet sie an (`apply_and_log(...)`), dann `st.rerun()`
+
+
+### `app.py`
+**Rolle:** Thin wrapper fuer den Streamlit-Entry-Point.
+- delegiert an `ui/streamlit_app.py`
 
 ### `core/state.py`
 **Rolle:** Domänenmodell.
@@ -100,7 +105,7 @@ Eine Streamlit-App für „Mühle“ mit:
 ## Datenfluss (UI → Engine)
 1. Backend erzeugt `svg` + `hotspots` + State-Args → `muehle_board(...)`
 2. Frontend rendert, Nutzer klickt → Event `{kind, src?, dst?, nonce}`
-3. `app.py` validiert / guardet (u. a. Terminal/Draw/Nonce), baut `Action`
+3. `ui/streamlit_app.py` validiert / guardet (u. a. Terminal/Draw/Nonce), baut `Action`
 4. Backend `apply_action`/`apply_and_log` → neuer `GameState` (+ Draw-Tracking) + History-Snapshot + Log-Notation
 5. `st.rerun()` → neues Render
 

@@ -1,6 +1,6 @@
 from types import SimpleNamespace
 
-import app
+from ui import streamlit_app as app
 from core.rules import Action
 from core.state import GameState
 
