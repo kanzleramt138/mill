@@ -31,7 +31,6 @@ from mill.analysis import (
 )
 
 from engine import analyze, AnalysisResult, EvalWeights, Limits, classify_move_loss, score_ply
-
 from engine.movegen import apply_ply, legal_plies
 from mill.rules import position_key_from_state
 
@@ -378,7 +377,6 @@ def _render_tactic_hints(state: GameState, ply) -> None:
     bullets = _format_hint_bullets(hints)
     if bullets:
         st.markdown("\n".join(f"- {b}" for b in bullets))
-
 
 
 def _find_transition_ply(prev_state: GameState, next_state: GameState):
