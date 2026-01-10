@@ -6,12 +6,12 @@ from typing import Dict, List, Optional, Tuple, Literal
 
 from mill.graph import MILLS
 from mill.rules import draw_reason, forms_mill_after_placement, winner
-from mill.rules import position_key_from_state
+from mill.rules import position_key_from_state, position_key_with_symmetry
 from mill.state import GameState, Stone
 
 from .eval import evaluate
 from .movegen import apply_ply, legal_plies
-from .types import AnalysisResult, Limits, Ply, ScoredMove, EvalWeights
+from .types import AnalysisResult, Limits, Ply, ScoredMove, EvalBreakdown, EvalWeights
 
 MATE_SCORE = 1_000_000.0
 DEFAULT_TOP_N_MOVES = 5
@@ -36,6 +36,7 @@ class _TTEntry:
     score: float
     flag: Literal["exact", "lower", "upper"]
     best_ply: Ply | None
+    score_only: bool = False
 
 
 def analyze(state: GameState, limits: Limits | None = None, for_player: Stone | None = None) -> AnalysisResult:
@@ -178,36 +179,38 @@ def _negamax_root(
     plies = _order_plies(state, legal_plies(state), prev_best)
     best_score = float("-inf")
     best_pv: List[Ply] = []
+    scored_raw: List[Tuple[Ply, float, List[Ply], EvalBreakdown]] = []
     scored: List[ScoredMove] = []
     for ply in plies:
         nxt = apply_ply(state, ply)
         _, breakdown = evaluate(nxt, ctx.for_player, ctx.eval_weights)
         score, child_pv, stopped = _negamax(nxt, depth - 1, -beta, -alpha, -color, ctx)
         if stopped:
-            return best_score, best_pv, scored, True
+            return best_score, best_pv, [], True
         score = -score
-        scored.append(ScoredMove(ply=ply, score=score, pv=[ply] + child_pv, breakdown=breakdown))
+
+        _, breakdown = evaluate(nxt, ctx.for_player, ctx.eval_weights)
+        scored_raw.append((ply, score, [ply] + child_pv, breakdown))
+
         if score > best_score:
             best_score = score
             best_pv = [ply] + child_pv
         if score > alpha:
             alpha = score
-    scored.sort(key=lambda s: s.score, reverse=True)
-    if scored:
-        best_breakdown = scored[0].breakdown
-        scored = [
+    best_breakdown = _best_breakdown(scored_raw)
+    scored: List[ScoredMove] = []
+    for ply, score, pv, breakdown in scored_raw:
+        scored.append(
             ScoredMove(
-                ply=sm.ply,
-                score=sm.score,
-                pv=sm.pv,
-                breakdown=sm.breakdown,
-                breakdown_diff={
-                    key: sm.breakdown.get(key, 0.0) - best_breakdown.get(key, 0.0)
-                    for key in set(best_breakdown.keys()) | set(sm.breakdown.keys())
-                },
+                ply=ply,
+                score=score,
+                pv=pv,
+                breakdown=breakdown,
+                breakdown_diff=_diff_breakdowns(best_breakdown, breakdown),
             )
-            for sm in scored
-        ]
+        )
+    scored.sort(key=lambda s: s.score, reverse=True)
+    
     return best_score, best_pv, scored[:top_n], False
 
 
@@ -236,26 +239,36 @@ def _negamax(
         return color * eval_score, [], False
 
     key = position_key_from_state(state)
+    sym_key = position_key_with_symmetry(state)
+    tt_entry = None
+    tt_hit_was_symmetric = False
     if ctx.tt is not None:
         tt_entry = ctx.tt.get(key)
+        if tt_entry is None and sym_key != key:
+            tt_entry = ctx.tt.get(sym_key)
+            if tt_entry is not None:
+                tt_hit_was_symmetric = True
         if tt_entry is None:
             ctx.tt_misses += 1
         else:
             ctx.tt_hits += 1
-    else:
-        tt_entry = None
     if tt_entry is not None and tt_entry.depth >= depth:
+        pv = []
+        # Suppress best_ply if the hit came from a symmetric key
+        if not tt_entry.score_only and tt_entry.best_ply is not None and not tt_hit_was_symmetric:
+            pv = [tt_entry.best_ply]
         if tt_entry.flag == "exact":
-            pv = [tt_entry.best_ply] if tt_entry.best_ply is not None else []
             return tt_entry.score, pv, False
         if tt_entry.flag == "lower" and tt_entry.score >= beta:
-            pv = [tt_entry.best_ply] if tt_entry.best_ply is not None else []
             return tt_entry.score, pv, False
         if tt_entry.flag == "upper" and tt_entry.score <= alpha:
-            pv = [tt_entry.best_ply] if tt_entry.best_ply is not None else []
             return tt_entry.score, pv, False
 
-    plies = _order_plies(state, legal_plies(state), root_hint or (tt_entry.best_ply if tt_entry else None))
+    # Suppress best_ply for move ordering if the hit came from a symmetric key
+    tt_best = None
+    if tt_entry and not tt_hit_was_symmetric:
+        tt_best = tt_entry.best_ply
+    plies = _order_plies(state, legal_plies(state), root_hint or tt_best)
     if not plies:
         eval_score, _ = evaluate(state, ctx.for_player, ctx.eval_weights)
         return color * eval_score, [], False
@@ -284,12 +297,25 @@ def _negamax(
             flag = "lower"
         else:
             flag = "exact"
-        ctx.tt[key] = _TTEntry(
+        entry = _TTEntry(
             depth=depth,
             score=best_score,
             flag=flag,
             best_ply=best_pv[0] if best_pv else None,
         )
+        _store_tt_entry(ctx.tt, key, entry)
+        if sym_key != key:
+            _store_tt_entry(
+                ctx.tt,
+                sym_key,
+                _TTEntry(
+                    depth=depth,
+                    score=best_score,
+                    flag=flag,
+                    best_ply=None,
+                    score_only=True,
+                ),
+            )
 
     return best_score, best_pv, False
 
@@ -301,6 +327,12 @@ def _terminal_score(state: GameState, for_player: Stone) -> float | None:
     if w is None:
         return None
     return MATE_SCORE if w == for_player else -MATE_SCORE
+
+
+def _store_tt_entry(tt: Dict[int, "_TTEntry"], key: int, entry: "_TTEntry") -> None:
+    existing = tt.get(key)
+    if existing is None or entry.depth >= existing.depth:
+        tt[key] = entry
 
 
 def _order_plies(state: GameState, plies: List[Ply], tt_best: Ply | None) -> List[Ply]:
@@ -358,3 +390,15 @@ def _should_stop(ctx: _SearchContext) -> bool:
 
 def _is_valid_state(state: object) -> bool:
     return hasattr(state, "to_move") and hasattr(state, "board")
+
+
+def _best_breakdown(scored_raw: List[Tuple[Ply, float, List[Ply], EvalBreakdown]]) -> EvalBreakdown:
+    if not scored_raw:
+        return {}
+    best = max(scored_raw, key=lambda item: item[1])
+    return best[3]
+
+
+def _diff_breakdowns(best: EvalBreakdown, other: EvalBreakdown) -> EvalBreakdown:
+    keys = set(best) | set(other)
+    return {key: best.get(key, 0.0) - other.get(key, 0.0) for key in keys}
