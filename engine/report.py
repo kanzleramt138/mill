@@ -14,6 +14,8 @@ from core.analysis import (
 )
 from core.rules import Action
 from core.state import GameState, Stone, opponent
+from .types import Limits, Ply
+from .analysis_helpers import classify_move_loss
 
 
 @dataclass(frozen=True)
@@ -38,6 +40,14 @@ class AnalysisOverlay:
     white: PlayerOverlay
     black: PlayerOverlay
     candidates: List[CandidateMove]
+
+@dataclass(frozen=True)
+class LastMoveSummary:
+    score: float
+    loss: float
+    label: str
+    pv: List[Ply]
+    in_top_n: bool
 
 
 def evaluate_light(state: GameState, player: Stone) -> float:
@@ -82,4 +92,43 @@ def build_analysis_overlay(state: GameState, *, max_candidates: int = 5) -> Anal
         white=white,
         black=black,
         candidates=candidates,
+    )
+
+
+def summarize_last_move(
+    prev_state: GameState,
+    last_ply: Ply,
+    *,
+    limits: Limits,
+    thresholds: dict[str, float],
+) -> LastMoveSummary:
+    from .search import analyze, score_ply
+
+    result = analyze(prev_state, limits=limits, for_player=prev_state.to_move)
+    last_score = None
+    last_pv: List[Ply] = []
+    in_top_n = False
+    for sm in result.top_moves:
+        if sm.ply == last_ply:
+            last_score = sm.score
+            last_pv = sm.pv
+            in_top_n = True
+            break
+
+    if last_score is None:
+        last_score, last_pv = score_ply(
+            prev_state,
+            last_ply,
+            limits=limits,
+            for_player=prev_state.to_move,
+        )
+
+    loss = max(0.0, result.score - last_score)
+    label = classify_move_loss(loss, thresholds)
+    return LastMoveSummary(
+        score=last_score,
+        loss=loss,
+        label=label,
+        pv=last_pv,
+        in_top_n=in_top_n,
     )

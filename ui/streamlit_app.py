@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import streamlit as st
 import time
-from typing import Any, Mapping, Protocol
+from typing import Mapping
 
 from engine import (
     Action,
@@ -27,7 +27,7 @@ from engine import (
     opponent,
     position_key_from_state,
     removable_positions,
-    score_ply,
+    summarize_last_move,
     tactic_hints_for_ply,
     threat_overlay_targets,
     winner,
@@ -680,17 +680,11 @@ def _format_breakdown(
     return ", ".join(items) if items else "-"
 
 
-def render_analysis_panel(
-    state: GameState,
-    *,
-    container: _ContentContainer | None = None,
-) -> None:
+def render_analysis_panel(state: GameState) -> None:
     """Seitliches Analyse-Panel (read-only)."""
     import streamlit as st  # lokal halten
 
-    content = container if container is not None else st
-
-    with st.expander("Analyse (aktuelle Stellung)", expanded=True):
+    with st.container():
         game_finished = (
             draw_reason(state) is not None
             or winner(state) is not None
@@ -698,7 +692,7 @@ def render_analysis_panel(
         )
 
         if not game_finished:
-            content.markdown("**Engine (Search)**")
+            st.markdown("**Engine (Search)**")
             depth = int(st.session_state.get("search_depth", 2))
             time_ms = int(st.session_state.get("search_time_ms", 0)) or None
             top_n = int(st.session_state.get("search_top_n", 5))
@@ -772,7 +766,7 @@ def render_analysis_panel(
                 while len(order) > cache_size:
                     old_key = order.pop(0)
                     cache.pop(old_key, None)
-            content.write(
+            st.write(
                 f"Depth={result.depth}, Nodes={result.nodes}, "
                 f"TT hits/misses={result.tt_hits}/{result.tt_misses}"
             )
@@ -787,43 +781,43 @@ def render_analysis_panel(
                 "mistake": mistake_threshold,
             }
 
-            content.markdown("**Why Panel**")
-            with content.expander("Legende (Why Panel)", expanded=False):
+            st.markdown("**Why Panel**")
+            with st.expander("Legende (Why Panel)", expanded=False):
                 _render_why_legend(thresholds)
 
             if result.best_move is not None:
-                content.markdown("**Best Move**")
-                content.write(f"{_format_ply(result.best_move)} | Score {result.score:.2f}")
+                st.markdown("**Best Move**")
+                st.write(f"{_format_ply(result.best_move)} | Score {result.score:.2f}")
                 _render_tactic_hints(state, result.best_move)
             if result.pv:
-                content.markdown("**PV (Hauptvariante)**")
-                content.write(_format_pv_sentence(result.pv))
-                content.code(_format_pv(result.pv), language="text")
+                st.markdown("**PV (Hauptvariante)**")
+                st.write(_format_pv_sentence(result.pv))
+                st.code(_format_pv(result.pv), language="text")
             if result.breakdown:
-                content.markdown("**Eval Breakdown (Position)**")
-                content.write(_format_breakdown(result.breakdown))
+                st.markdown("**Eval Breakdown (Position)**")
+                st.write(_format_breakdown(result.breakdown))
             if result.top_moves:
-                content.markdown("**Top Moves**")
+                st.markdown("**Top Moves**")
                 best_score = result.score
                 for sm in result.top_moves:
                     loss = max(0.0, best_score - sm.score)
                     label = classify_move_loss(loss, thresholds)
-                    content.markdown(
+                    st.markdown(
                         f"{_format_class_label(label)} {_format_ply(sm.ply)} "
                         f"— Score {sm.score:.2f}, Loss {loss:.2f}"
                     )
                     has_details = bool(sm.breakdown or sm.breakdown_diff or sm.pv)
                     if has_details:
-                        with content.expander(f"Details: {_format_ply(sm.ply)}", expanded=False):
+                        with st.expander(f"Details: {_format_ply(sm.ply)}", expanded=False):
                             if sm.breakdown:
-                                content.write(f"Breakdown: {_format_breakdown(sm.breakdown)}")
+                                st.write(f"Breakdown: {_format_breakdown(sm.breakdown)}")
                             if sm.breakdown_diff:
                                 diff_line = _format_breakdown(sm.breakdown_diff, only_non_zero=True, signed=True)
                                 if diff_line != "-":
-                                    content.write(f"Diff zum Best-Move: {diff_line}")
+                                    st.write(f"Diff zum Best-Move: {diff_line}")
                             if sm.pv:
-                                content.write(_format_pv_sentence(sm.pv))
-                                content.code(_format_pv(sm.pv), language="text")
+                                st.write(_format_pv_sentence(sm.pv))
+                                st.code(_format_pv(sm.pv), language="text")
 
             hist: History | None = getattr(st.session_state, "state_history", None)
             if hist is not None and hist.past:
@@ -837,40 +831,24 @@ def render_analysis_panel(
                         use_tt=use_tt,
                         eval_weights=weights,
                     )
-                    last_result = analyze(
+                    summary = summarize_last_move(
                         prev_state,
+                        last_ply,
                         limits=last_limits,
-                        for_player=prev_state.to_move,
+                        thresholds=thresholds,
                     )
-                    last_score = None
-                    last_pv = None
-                    for sm in last_result.top_moves:
-                        if sm.ply == last_ply:
-                            last_score = sm.score
-                            last_pv = sm.pv
-                            break
-                    not_in_top_n = last_score is None
-                    if last_score is None:
-                        last_score, last_pv = score_ply(
-                            prev_state,
-                            last_ply,
-                            limits=last_limits,
-                            for_player=prev_state.to_move,
-                        )
-                    last_loss = max(0.0, last_result.score - last_score)
-                    last_label = classify_move_loss(last_loss, thresholds)
-                    suffix = " (not in Top-N)" if not_in_top_n else ""
-                    content.markdown("**Last Move**")
-                    content.write(
+                    suffix = " (not in Top-N)" if not summary.in_top_n else ""
+                    st.markdown("**Last Move**")
+                    st.write(
                         "%s | Score %.2f | Loss %.2f | %s%s"
-                        % (_format_ply(last_ply), last_score, last_loss, last_label, suffix)
+                        % (_format_ply(last_ply), summary.score, summary.loss, summary.label, suffix)
                     )
-                    if last_pv:
-                        content.code(_format_pv(last_pv), language="text")
+                    if summary.pv:
+                        st.code(_format_pv(summary.pv), language="text")
 
         overlay = build_analysis_overlay(state, max_candidates=5)
 
-        content.markdown("---")
+        st.markdown("---")
         
         for player in (Stone.WHITE, Stone.BLACK):
             player_overlay = overlay.white if player == Stone.WHITE else overlay.black
@@ -880,25 +858,25 @@ def render_analysis_panel(
             profile = player_overlay.profile
 
             if player == Stone.BLACK:
-                content.markdown("---")
-            content.markdown(f"**{player_label(player)}**")
-            content.write(f"Threat-Squares: {_format_positions(threats)}")
-            content.write(
+                st.markdown("---")
+            st.markdown(f"**{player_label(player)}**")
+            st.write(f"Threat-Squares: {_format_positions(threats)}")
+            st.write(
                 f"Mobility: Score = {mobility:.0f}, "
                 f"Steine beweglich = {int(profile['movable_count'])}/{int(profile['total_stones'])}, "
                 f"ø-Mobilität={profile['avg_mobility']:.2f}"
             )
-            content.write(
+            st.write(
                 f"Blockierte Steine: {_format_positions(blocked)} "
                 f"({profile['blocked_ratio']*100:.1f}% blockiert)"
             )
 
             # einfache Zug-Vorschau nur für side-to-move
             if player == state.to_move:
-                content.write("Kandidatenzüge (Heuristik):")
+                st.write("Kandidatenzüge (Heuristik):")
                 for cand in overlay.candidates:
                     nota = action_to_notation(cand.action, before=state)
-                    content.write(f"  {nota}: {cand.score:.2f} (delta {cand.delta:+.2f})")
+                    st.write(f"  {nota}: {cand.score:.2f} (delta {cand.delta:+.2f})")
 
 
 def main() -> None:
@@ -925,7 +903,8 @@ def main() -> None:
                 analysis_container = st.container(height=700)
             except TypeError:
                 analysis_container = st.container()
-            render_analysis_panel(s, container=analysis_container)
+            with analysis_container:
+                render_analysis_panel(s)
 
         with tab_history:
             st.subheader("Historie")
@@ -969,8 +948,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-class _ContentContainer(Protocol):
-    def markdown(self, body: str) -> Any: ...
-    def write(self, *args: Any, **kwargs: Any) -> Any: ...
-    def code(self, body: str, language: str | None = None) -> Any: ...
-    def expander(self, label: str, expanded: bool = False) -> Any: ...
