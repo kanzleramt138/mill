@@ -62,6 +62,12 @@ Eine Streamlit-App für „Mühle“ mit:
 - Light-Evaluation (`evaluate_light`)
 - Kandidatenzüge (`scored_actions_for_to_move`)
 
+### `engine/report.py`
+**Rolle:** Engine-Fassade fuer read-only Analyse/Overlays.
+- aggregiert Threats/Mobility/Blocked/Kandidaten fuer die UI
+- kapselt `mill/analysis.py` fuer saubere UI-Engine-Grenze
+
+
 ### `mill/board_svg.py`
 **Rolle:** Rendering (SVG).
 - zeichnet Board + Steine
@@ -79,6 +85,9 @@ Eine Streamlit-App für „Mühle“ mit:
 **Rolle:** Python-Bridge zum Custom Component.
 - `declare_component` auf `muehle_board_component/`
 - Typing für Events (`ActionEvent`) – ideal als „discriminated union“
+
+### `ui/`
+**Rolle:** UI-Fassade (Re-Exports fuer Board/History/Notation/UI-Helper).
 
 ### `muehle_board_component/`
 **Rolle:** Frontend-Assets des Streamlit Components (aktuell „static“).

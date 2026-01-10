@@ -27,6 +27,8 @@ Dieses Repo implementiert ƒ?zMÇ¬hleƒ?o (Nine Men's Morris) als Streamlit-App
 - `mill/rules.py`: Regel-Engine (Legal moves, mills, remove, end conditions). Bevorzugt pure functions.
 - `mill/board_svg.py`: SVG Rendering (keine Regel-Logik erzwingen).
 - `mill/board_component.py`: Component bridge + Event-Typing.
+- `engine/report.py`: Engine-Fassade fuer read-only Analyse/Overlays (Threats, Mobility, Kandidaten).
+- `ui/`: UI-Fassade (Re-Exports fuer Board/History/Notation/UI-Helper).
 - `muehle_board_component/`: Frontend (static). Keine ESM `import/export` verwenden, auÇYer es gibt ein Build (`dist/`/`build/`).
 - `app.py`: Streamlit-Orchestrator (Wiring, Session-State, EventƒÅ'Action, rerun).
 
