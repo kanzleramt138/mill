@@ -1,4 +1,4 @@
-# mill/state.py
+# core/state.py
 from __future__ import annotations
 
 from dataclasses import dataclass, replace

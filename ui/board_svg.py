@@ -1,4 +1,4 @@
-# mill/board_svg.py
+# ui/board_svg.py
 from __future__ import annotations
 
 from typing import Dict, Tuple, Set, Optional

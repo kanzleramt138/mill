@@ -1,4 +1,4 @@
-# mill/analysis.py
+# core/analysis.py
 from __future__ import annotations
 
 from dataclasses import replace

@@ -1,4 +1,4 @@
-# mill/board_component.py
+# ui/board_component.py
 from __future__ import annotations
 
 
@@ -12,7 +12,7 @@ class ActionEvent(TypedDict, total=False):
     dst: int
     nonce: int
 
-# mill/board_component.py  -> mill/ (this file) -> project root -> muehle_board_component/
+# ui/board_component.py -> ui/ (this file) -> project root -> muehle_board_component/
 _COMPONENT_DIR = (Path(__file__).resolve().parent.parent / "muehle_board_component").resolve()
 
 # Optional: helpful assertion (can comment out later)
