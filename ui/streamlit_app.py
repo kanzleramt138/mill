@@ -404,6 +404,34 @@ def _format_hint_bullets(hints: dict[str, object]) -> list[str]:
         else:
             bullets.append("Gegner bekommt Mill-in-1")
 
+    missed_double = bool(hints.get("missed_double_threat"))
+    if missed_double:
+        missed_double_threats = hints.get("missed_double_threats", set())
+        if isinstance(missed_double_threats, set):
+            bullets.append(
+                f"Doppelte Drohung verpasst: {_format_positions(missed_double_threats)}"
+            )
+        else:
+            bullets.append("Doppelte Drohung verpasst")
+
+    allowed_double = bool(hints.get("allowed_double_threat"))
+    if allowed_double:
+        allowed_double_threats = hints.get("allowed_double_threats", set())
+        if isinstance(allowed_double_threats, set):
+            bullets.append(
+                f"Gegner bekommt doppelte Drohung: {_format_positions(allowed_double_threats)}"
+            )
+        else:
+            bullets.append("Gegner bekommt doppelte Drohung")
+
+    new_blocked_self = hints.get("new_blocked_self", set())
+    if isinstance(new_blocked_self, set) and new_blocked_self:
+        bullets.append(f"Eigener Stein gefangen: {_format_positions(new_blocked_self)}")
+
+    new_blocked_opp = hints.get("new_blocked_opp", set())
+    if isinstance(new_blocked_opp, set) and new_blocked_opp:
+        bullets.append(f"Gegnerstein gefangen: {_format_positions(new_blocked_opp)}")
+
     blocked_white = hints.get("blocked_white", set())
     blocked_black = hints.get("blocked_black", set())
     if isinstance(blocked_white, set) and isinstance(blocked_black, set):

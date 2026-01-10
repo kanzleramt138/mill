@@ -259,3 +259,65 @@ def test_tactic_hints_no_fallback_on_opponent_threats() -> None:
 
     assert hints["missed_mill_in_1"] is False
     assert len(hints["missed_threats"]) == 0
+
+
+def test_tactic_hints_detects_missed_double_threat() -> None:
+    """Test: Erkennt, wenn eine doppelte Drohung verpasst wird."""
+    base = GameState.initial()
+    board = list(base.board)
+
+    # Double threat on position 1: mills (0,1,2) and (1,4,7)
+    board[0] = Stone.WHITE
+    board[2] = Stone.WHITE
+    board[4] = Stone.WHITE
+    board[7] = Stone.WHITE
+
+    state = _state_with_board(board, to_move=Stone.WHITE, in_hand_white=1)
+    ply = Ply(kind="place", dst=10)
+
+    hints = tactic_hints_for_ply(state, ply)
+
+    assert hints["missed_double_threat"] is True
+    assert 1 in hints["missed_double_threats"]
+
+
+def test_tactic_hints_detects_used_double_threat_square() -> None:
+    """Test: Erkennt, wenn eine doppelte Drohung genutzt wird."""
+    base = GameState.initial()
+    board = list(base.board)
+
+    board[0] = Stone.WHITE
+    board[2] = Stone.WHITE
+    board[4] = Stone.WHITE
+    board[7] = Stone.WHITE
+
+    state = _state_with_board(board, to_move=Stone.WHITE, in_hand_white=1)
+    ply = Ply(kind="place", dst=1)
+
+    hints = tactic_hints_for_ply(state, ply)
+
+    assert hints["used_double_threat_square"] == 1
+    assert hints["missed_double_threat"] is False
+
+
+def test_tactic_hints_detects_trapped_opponent_stone() -> None:
+    """Test: Erkennt, wenn ein gegnerischer Stein gefangen wird."""
+    base = GameState.initial()
+    board = list(base.board)
+
+    board[0] = Stone.BLACK
+    board[2] = Stone.BLACK
+    board[6] = Stone.BLACK
+    board[8] = Stone.BLACK
+
+    board[1] = Stone.WHITE
+    board[10] = Stone.WHITE
+    board[5] = Stone.WHITE
+    board[7] = Stone.WHITE
+
+    state = _state_with_board(board, to_move=Stone.WHITE, in_hand_white=0, in_hand_black=0)
+    ply = Ply(kind="move", src=10, dst=9)
+
+    hints = tactic_hints_for_ply(state, ply)
+
+    assert 0 in hints["new_blocked_opp"]

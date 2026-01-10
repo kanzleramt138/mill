@@ -300,6 +300,8 @@ def tactic_hints_for_ply(state: GameState, ply: Ply) -> Dict[str, object]:
 
     threats_before_self = compute_threat_squares(state, player, use_fallback=False)
     threats_before_opp = compute_threat_squares(state, opp, use_fallback=False)
+    double_threats_before_self = double_threat_squares(state, player)
+    double_threats_before_opp = double_threat_squares(state, opp)
 
     used_threat_square = None
     if ply.kind in ("place", "move", "fly") and ply.dst is not None:
@@ -310,12 +312,30 @@ def tactic_hints_for_ply(state: GameState, ply: Ply) -> Dict[str, object]:
     if ply.kind != "remove" and threats_before_self and used_threat_square is None:
         missed_mill_in_1 = True
 
+    used_double_threat_square = None
+    if ply.kind in ("place", "move", "fly") and ply.dst is not None:
+        if ply.dst in double_threats_before_self:
+            used_double_threat_square = ply.dst
+
+    missed_double_threat = False
+    if ply.kind != "remove" and double_threats_before_self and used_double_threat_square is None:
+        missed_double_threat = True
+
     next_state = apply_ply(state, ply)
     threats_after_opp = compute_threat_squares(next_state, opp, use_fallback=False)
     new_opp_threats = threats_after_opp - threats_before_opp
+    double_threats_after_opp = double_threat_squares(next_state, opp)
+    new_opp_double_threats = double_threats_after_opp - double_threats_before_opp
+
+    blocked_before_white = blocked_stones(state, Stone.WHITE)
+    blocked_before_black = blocked_stones(state, Stone.BLACK)
 
     blocked_white = blocked_stones(next_state, Stone.WHITE)
     blocked_black = blocked_stones(next_state, Stone.BLACK)
+    new_blocked_white = blocked_white - blocked_before_white
+    new_blocked_black = blocked_black - blocked_before_black
+    new_blocked_self = new_blocked_white if player == Stone.WHITE else new_blocked_black
+    new_blocked_opp = new_blocked_black if player == Stone.WHITE else new_blocked_white
 
     return {
         "missed_mill_in_1": missed_mill_in_1,
@@ -323,6 +343,13 @@ def tactic_hints_for_ply(state: GameState, ply: Ply) -> Dict[str, object]:
         "used_threat_square": used_threat_square,
         "allowed_mill_in_1": bool(new_opp_threats),
         "allowed_threats": new_opp_threats,
+        "missed_double_threat": missed_double_threat,
+        "missed_double_threats": double_threats_before_self,
+        "used_double_threat_square": used_double_threat_square,
+        "allowed_double_threat": bool(new_opp_double_threats),
+        "allowed_double_threats": new_opp_double_threats,
         "blocked_white": blocked_white,
         "blocked_black": blocked_black,
+        "new_blocked_self": new_blocked_self,
+        "new_blocked_opp": new_blocked_opp,
     }
