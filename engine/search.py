@@ -180,6 +180,7 @@ def _negamax_root(
     best_score = float("-inf")
     best_pv: List[Ply] = []
     scored_raw: List[Tuple[Ply, float, List[Ply], EvalBreakdown]] = []
+    scored: List[ScoredMove] = []
     for ply in plies:
         nxt = apply_ply(state, ply)
         _, breakdown = evaluate(nxt, ctx.for_player, ctx.eval_weights)
@@ -190,8 +191,6 @@ def _negamax_root(
 
         _, breakdown = evaluate(nxt, ctx.for_player, ctx.eval_weights)
         scored_raw.append((ply, score, [ply] + child_pv, breakdown))
-
-        scored.append(ScoredMove(ply=ply, score=score, pv=[ply] + child_pv, breakdown=breakdown))
 
         if score > best_score:
             best_score = score
@@ -211,21 +210,7 @@ def _negamax_root(
             )
         )
     scored.sort(key=lambda s: s.score, reverse=True)
-    if scored:
-        best_breakdown = scored[0].breakdown
-        scored = [
-            ScoredMove(
-                ply=sm.ply,
-                score=sm.score,
-                pv=sm.pv,
-                breakdown=sm.breakdown,
-                breakdown_diff={
-                    key: sm.breakdown.get(key, 0.0) - best_breakdown.get(key, 0.0)
-                    for key in set(best_breakdown.keys()) | set(sm.breakdown.keys())
-                },
-            )
-            for sm in scored
-        ]
+    
     return best_score, best_pv, scored[:top_n], False
 
 
