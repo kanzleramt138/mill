@@ -239,3 +239,15 @@ Regel: Overlay niemals State veraendern.
 3. Blocked-Overlay (schnellster visueller Mehrwert)
 4. Mobility-Overlay (Farbschema definieren)
 5. Phase-spezifisches Tuning (Schwellen pro Phase)
+
+---
+
+## 18) Strategie -> Lern-/Overlay-Heuristiken (aus `docs/strategy.md`)
+
+Ziel: Lehrregeln, die als Hints/Overlays wirken (nicht als Eval-Gewicht).
+- Kreuzungen im mittleren Quadrat als „Schluesselfelder“ markieren (Overlay).
+- Fruehe Achsenmuehle warnen („Mobilitaet droht zu kollabieren“).
+- Offene Muehlen > geschlossene Muehlen (Hint nach Muehlenschluss).
+- Zwickmuehle erklaeren (Double-Threat Hinweis + Beispielzug).
+- „Falscher Raub“ vermeiden: bevorzugt Mobilitaets-/Verbindungssteine entfernen.
+- Springen erreicht: „Taktik ist jetzt brutal direkt“ (Hinweis im Endspiel).

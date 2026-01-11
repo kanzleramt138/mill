@@ -194,3 +194,16 @@ Wichtige Leitplanken:
   schliesst, ohne die beiden Steine der Linie zu bewegen)?
 - Ring-Gewichtung dynamisch an Mobility/Connectivity koppeln?
 - Sollen Phase-Weights als eigene Defaults in `EvalWeights` hinterlegt werden?
+
+---
+
+## 8) Strategie -> Eval-Hypothesen (aus `docs/strategy.md`)
+
+Kurzfassung fuer Tuning (keine UI-Regeln):
+- Kreuzungen im mittleren Quadrat priorisieren -> Bonus fuer zentrale Knoten/Connectivity.
+- Fruehe Achsenmuehle (Linie 4 oder d) in Placing -> Penalty, weil Mobilitaet kollabiert.
+- Fruehe geschlossene Muehle generell -> leichte Penalty gg. offene Muehlen.
+- Steinvorteil ohne Mobilitaet -> Materialgewicht begrenzen, Mobility/Blocked hochziehen (Moving).
+- Zwickmuehle-Druck -> bestaetigt Double-Threats als starker Treiber.
+- Erstes Springen sehr stark -> Flying-Phase Material/Threats stark, Mobility/Blocked auf 0.
+- „Falscher Raub“ ist oft entscheidend -> Remove-Heuristik spaeter als eigenes Feature testen.

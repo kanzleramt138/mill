@@ -1,3 +1,5 @@
+- Eval-Hypothesen aus EVAL_TUNING_NOTES.md (#8) konkretisieren
+
 - Verluststellungen nummerieren und referenzierbar machen (LS-1, LS-2 …)
 
 - jede Verlust-/Übergangsstelle mit einer knappen Engine-Regel ergänzen
