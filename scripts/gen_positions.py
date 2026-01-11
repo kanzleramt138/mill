@@ -21,7 +21,7 @@ from core.hash import position_key_with_symmetry
 from core.rules import draw_reason, is_terminal, winner
 from core.state import GameState, Stone
 from engine.search import analyze
-from engine.movegen import apply_ply
+from engine.movegen import apply_ply, legal_plies
 from engine.types import Limits
 
 
@@ -84,6 +84,22 @@ def _record_sample(state: GameState, reason: List[str], game_id: int, ply_index:
     }
 
 
+def _find_pending_state(state: GameState) -> tuple[GameState | None, dict | None]:
+    for ply in legal_plies(state):
+        try:
+            nxt = apply_ply(state, ply)
+        except ValueError:
+            continue
+        if nxt.pending_remove:
+            return nxt, {
+                "kind": ply.kind,
+                "src": ply.src,
+                "dst": ply.dst,
+                "remove": ply.remove,
+            }
+    return None, None
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--target", type=int, default=30)
@@ -97,19 +113,38 @@ def main() -> int:
     parser.add_argument("--no-tt", action="store_true")
     parser.add_argument("--output", type=str, default="data/tuning_positions.jsonl")
     parser.add_argument("--phase-targets", type=str, default="")
+    parser.add_argument("--append", action="store_true")
+    parser.add_argument("--pending-only", action="store_true")
     args = parser.parse_args()
 
     if args.target <= 0:
         raise SystemExit("target must be > 0")
 
-    if args.phase_targets:
-        phase_targets = _parse_phase_targets(args.phase_targets, args.target)
-    else:
-        phase_targets = _default_phase_targets(args.target)
-
-    counts = {"placing": 0, "moving": 0, "flying": 0}
+    out_path = ROOT / args.output
     samples: List[Dict[str, object]] = []
     seen: set[int] = set()
+    counts = {"placing": 0, "moving": 0, "flying": 0}
+
+    if args.append and out_path.exists():
+        with out_path.open("r", encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip()
+                if not line:
+                    continue
+                row = json.loads(line)
+                samples.append(row)
+                key = row.get("key")
+                if key is not None:
+                    seen.add(key)
+                phase = row.get("phase_to_move")
+                if phase in counts:
+                    counts[phase] += 1
+
+    target_total = args.target if not args.append else len(samples) + args.target
+    if args.phase_targets:
+        phase_targets = _parse_phase_targets(args.phase_targets, target_total)
+    else:
+        phase_targets = _default_phase_targets(target_total)
 
     use_tt = not args.no_tt
     limits = Limits(max_depth=args.depth, top_n=args.top_n, use_tt=use_tt)
@@ -118,19 +153,41 @@ def main() -> int:
         rng = random.Random(args.seed + game_id)
         state = GameState.initial()
         for ply_index in range(args.max_plies):
-            if len(samples) >= args.target:
+            if len(samples) >= target_total:
                 break
             if draw_reason(state) is not None or winner(state) is not None or is_terminal(state):
                 break
 
-            phase = state.phase(state.to_move)
-            reasons = _should_sample(state, ply_index, args.interval)
-            if reasons and counts[phase] < phase_targets[phase]:
-                key = position_key_with_symmetry(state)
-                if key not in seen:
-                    seen.add(key)
-                    samples.append(_record_sample(state, reasons, game_id, ply_index))
-                    counts[phase] += 1
+            if args.pending_only:
+                pending_state: GameState | None = None
+                pending_reason = None
+                pending_ply = None
+                if state.pending_remove:
+                    pending_state = state
+                    pending_reason = ["pending_remove"]
+                else:
+                    pending_state, pending_ply = _find_pending_state(state)
+                    if pending_state is not None:
+                        pending_reason = ["pending_remove_forced"]
+                if pending_state is not None and pending_reason is not None:
+                    key = position_key_with_symmetry(pending_state)
+                    if key not in seen:
+                        seen.add(key)
+                        row = _record_sample(pending_state, pending_reason, game_id, ply_index)
+                        if pending_ply is not None:
+                            row["derived_from_ply"] = pending_ply
+                        samples.append(row)
+                if len(samples) >= target_total:
+                    break
+            else:
+                phase = state.phase(state.to_move)
+                reasons = _should_sample(state, ply_index, args.interval)
+                if reasons and counts[phase] < phase_targets[phase]:
+                    key = position_key_with_symmetry(state)
+                    if key not in seen:
+                        seen.add(key)
+                        samples.append(_record_sample(state, reasons, game_id, ply_index))
+                        counts[phase] += 1
 
             result = analyze(state, limits=limits, for_player=state.to_move)
             ply = _select_ply(result, rng, args.epsilon, args.top_n)
@@ -138,17 +195,17 @@ def main() -> int:
                 break
             state = apply_ply(state, ply)
 
-        if len(samples) >= args.target:
+        if len(samples) >= target_total:
             break
 
-    out_path = ROOT / args.output
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with out_path.open("w", encoding="utf-8") as fh:
         for sample in samples:
             fh.write(json.dumps(sample) + "\n")
 
     print(f"Saved {len(samples)} positions to {out_path}")
-    print(f"Phase counts: {counts}")
+    if not args.pending_only:
+        print(f"Phase counts: {counts}")
     return 0
 
 
