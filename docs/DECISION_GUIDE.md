@@ -79,16 +79,18 @@ Kurz: Erst Gefahr/Chance, dann Struktur, dann Langfrist.
 ## 5) Phasen-spezifische Ableitungen
 
 ### Placing
-- Wichtig: Open Mills, Threats, Double-Threats, Fork-Threats, Connectivity.
-- Weniger wichtig: Mobility (noch nicht stabil), Blocked nur begrenzt.
+- Wichtig: Open Mills, Threats, Double-/Fork-Threats, Connectivity.
+- Mobility: 0 (keine Zugzwang-Signale im Placing).
+- Blocked: 0 (Blockaden sind noch nicht stabil).
 - Entscheidung: Drohung erzeugen oder verhindern hat Prioritaet.
 
 ### Moving
-- Wichtig: Mobility, Blocked, Threats, Double-Threats.
+- Wichtig: Mobility, Blocked, Threats, Double-/Fork-Threats.
 - Entscheidung: Wenn Mobility niedrig -> entblocken; sonst Angriff/Threat.
 
 ### Flying
-- Mobility weniger relevant (freie Zuege), Blockade geringer.
+- Mobility: 0 (Fliegen macht Mobilitaet kuenstlich hoch).
+- Blocked: 0 (Blockaden verlieren an Stabilitaet).
 - Wichtig: Threats, Double-/Fork-Threats und Material (Endspiel).
 - Entscheidung: direkte Taktik und Materialerhalt.
 

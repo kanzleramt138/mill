@@ -1,0 +1,5 @@
+- Verluststellungen nummerieren und referenzierbar machen (LS-1, LS-2 …)
+
+- jede Verlust-/Übergangsstelle mit einer knappen Engine-Regel ergänzen
+„Wenn Bedingung A ∧ B ∧ C → Stellung kritisch“
+- engine-nahe Heuristik-Tabelle (Phase × Signal × Bewertung)
