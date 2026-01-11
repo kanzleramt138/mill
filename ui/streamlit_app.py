@@ -267,6 +267,7 @@ def sidebar_controls() -> None:
         help="Zeigt Drohfelder des Gegners (read-only).",
     )
 
+
     st.sidebar.subheader("Engine (Search)")
     if "search_depth" not in st.session_state:
         st.session_state.search_depth = 2
@@ -347,6 +348,8 @@ def sidebar_controls() -> None:
         st.session_state.w_blocked_opponent = 0.5
     if "w_double_threats" not in st.session_state:
         st.session_state.w_double_threats = 1.0
+    if "w_fork_threats" not in st.session_state:
+        st.session_state.w_fork_threats = 1.0
     if "w_connectivity" not in st.session_state:
         st.session_state.w_connectivity = 0.5
     if "w_initiative_strategic" not in st.session_state:
@@ -409,6 +412,14 @@ def sidebar_controls() -> None:
         step=0.5,
         key="w_double_threats",
         help="Felder mit zwei Muehlen-Drohungen.",
+    )
+    st.sidebar.number_input(
+        "Fork Threats",
+        min_value=0.0,
+        max_value=10.0,
+        step=0.5,
+        key="w_fork_threats",
+        help="Mehrere Mill-in-1-Drohfelder (mind. 2).",
     )
     st.sidebar.number_input(
         "Connectivity",
@@ -602,6 +613,26 @@ def _format_hint_bullets(hints: dict[str, object]) -> list[str]:
         else:
             bullets.append("Gegner bekommt doppelte Drohung")
 
+    missed_fork = bool(hints.get("missed_fork_threat"))
+    if missed_fork:
+        missed_fork_threats = hints.get("missed_fork_threats", set())
+        if isinstance(missed_fork_threats, set):
+            bullets.append(
+                f"Fork-Drohung verpasst: {_format_positions(missed_fork_threats)}"
+            )
+        else:
+            bullets.append("Fork-Drohung verpasst")
+
+    allowed_fork = bool(hints.get("allowed_fork_threat"))
+    if allowed_fork:
+        allowed_fork_threats = hints.get("allowed_fork_threats", set())
+        if isinstance(allowed_fork_threats, set):
+            bullets.append(
+                f"Gegner bekommt Fork-Drohung: {_format_positions(allowed_fork_threats)}"
+            )
+        else:
+            bullets.append("Gegner bekommt Fork-Drohung")
+
     new_blocked_self = hints.get("new_blocked_self", set())
     if isinstance(new_blocked_self, set) and new_blocked_self:
         bullets.append(f"Eigener Stein gefangen: {_format_positions(new_blocked_self)}")
@@ -707,6 +738,7 @@ def render_analysis_panel(state: GameState) -> None:
                 threats_mill_in_1=float(st.session_state.get("w_threats_mill_in_1", 2.0)),
                 blocked_opponent=float(st.session_state.get("w_blocked_opponent", 0.5)),
                 double_threats=float(st.session_state.get("w_double_threats", 1.0)),
+                fork_threats=float(st.session_state.get("w_fork_threats", 1.0)),
                 connectivity=float(st.session_state.get("w_connectivity", 0.5)),
                 initiative_strategic=float(st.session_state.get("w_initiative_strategic", 0.0)),
                 initiative_tactical=float(st.session_state.get("w_initiative_tactical", 0.0)),
@@ -725,6 +757,7 @@ def render_analysis_panel(state: GameState) -> None:
                     weights.threats_mill_in_1,
                     weights.blocked_opponent,
                     weights.double_threats,
+                    weights.fork_threats,
                     weights.connectivity,
                     weights.initiative_strategic,
                     weights.initiative_tactical,
@@ -853,6 +886,7 @@ def render_analysis_panel(state: GameState) -> None:
         for player in (Stone.WHITE, Stone.BLACK):
             player_overlay = overlay.white if player == Stone.WHITE else overlay.black
             threats = player_overlay.threats
+            fork_threats = player_overlay.fork_threats
             mobility = player_overlay.mobility
             blocked = player_overlay.blocked
             profile = player_overlay.profile
@@ -861,6 +895,7 @@ def render_analysis_panel(state: GameState) -> None:
                 st.markdown("---")
             st.markdown(f"**{player_label(player)}**")
             st.write(f"Threat-Squares: {_format_positions(threats)}")
+            st.write(f"Fork-Threats: {_format_positions(fork_threats)}")
             st.write(
                 f"Mobility: Score = {mobility:.0f}, "
                 f"Steine beweglich = {int(profile['movable_count'])}/{int(profile['total_stones'])}, "

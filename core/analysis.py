@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import Dict, Set, List, Tuple, TYPE_CHECKING
 
-from .graph import MILLS, NEIGHBORS
+from .graph import MILLS, NEIGHBORS, RING_WEIGHT_BY_INDEX
 from .state import GameState, Stone, opponent, Phase
 from .rules import phase_for, Action, legal_actions, apply_action, removable_positions
 
@@ -97,6 +97,28 @@ def double_threat_squares(state: GameState, player: Stone) -> Set[int]:
     """
     counts = _threat_counts(state, player)
     return {pos for pos, count in counts.items() if count >= 2}
+
+
+def fork_threat_squares(state: GameState, player: Stone) -> Set[int]:
+    """
+    Fork-Threat: mehrere verschiedene Drohfelder (Mill-in-1) gleichzeitig.
+    Gibt die Drohfelder zurueck, wenn es mindestens zwei gibt.
+    """
+    threats = compute_threat_squares(state, player, use_fallback=False)
+    if len(threats) < 2:
+        return set()
+    return threats
+
+
+def fork_threat_score(state: GameState, player: Stone) -> float:
+    """
+    Fork-Threat: mindestens zwei verschiedene Drohfelder (Muehle-in-1) fuer den Player.
+    Gibt einen gewichteten Score zurueck (Mittelring leicht bevorzugt).
+    """
+    threats = fork_threat_squares(state, player)
+    if not threats:
+        return 0.0
+    return sum(RING_WEIGHT_BY_INDEX.get(pos, 1.0) for pos in threats)
 
 
 def mobility_by_pos(state: GameState, player: Stone) -> Dict[int, int]:
@@ -302,6 +324,8 @@ def tactic_hints_for_ply(state: GameState, ply: Ply) -> Dict[str, object]:
     threats_before_opp = compute_threat_squares(state, opp, use_fallback=False)
     double_threats_before_self = double_threat_squares(state, player)
     double_threats_before_opp = double_threat_squares(state, opp)
+    fork_threats_before_self = fork_threat_squares(state, player)
+    fork_threats_before_opp = fork_threat_squares(state, opp)
 
     used_threat_square = None
     if ply.kind in ("place", "move", "fly") and ply.dst is not None:
@@ -320,12 +344,22 @@ def tactic_hints_for_ply(state: GameState, ply: Ply) -> Dict[str, object]:
     missed_double_threat = False
     if ply.kind != "remove" and double_threats_before_self and used_double_threat_square is None:
         missed_double_threat = True
+    used_fork_threat_square = None
+    if ply.kind in ("place", "move", "fly") and ply.dst is not None:
+        if ply.dst in fork_threats_before_self:
+            used_fork_threat_square = ply.dst
+
+    missed_fork_threat = False
+    if ply.kind != "remove" and fork_threats_before_self and used_fork_threat_square is None:
+        missed_fork_threat = True
 
     next_state = apply_ply(state, ply)
     threats_after_opp = compute_threat_squares(next_state, opp, use_fallback=False)
     new_opp_threats = threats_after_opp - threats_before_opp
     double_threats_after_opp = double_threat_squares(next_state, opp)
     new_opp_double_threats = double_threats_after_opp - double_threats_before_opp
+    fork_threats_after_opp = fork_threat_squares(next_state, opp)
+    new_opp_fork_threats = fork_threats_after_opp - fork_threats_before_opp
 
     blocked_before_white = blocked_stones(state, Stone.WHITE)
     blocked_before_black = blocked_stones(state, Stone.BLACK)
@@ -348,6 +382,11 @@ def tactic_hints_for_ply(state: GameState, ply: Ply) -> Dict[str, object]:
         "used_double_threat_square": used_double_threat_square,
         "allowed_double_threat": bool(new_opp_double_threats),
         "allowed_double_threats": new_opp_double_threats,
+        "missed_fork_threat": missed_fork_threat,
+        "missed_fork_threats": fork_threats_before_self,
+        "used_fork_threat_square": used_fork_threat_square,
+        "allowed_fork_threat": bool(new_opp_fork_threats),
+        "allowed_fork_threats": new_opp_fork_threats,
         "blocked_white": blocked_white,
         "blocked_black": blocked_black,
         "new_blocked_self": new_blocked_self,

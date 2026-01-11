@@ -6,6 +6,7 @@ from typing import List
 from core.analysis import (
     blocked_stones,
     compute_threat_squares,
+    fork_threat_squares,
     evaluate_light as _evaluate_light,
     mobility_profile,
     mobility_score,
@@ -21,6 +22,7 @@ from .analysis_helpers import classify_move_loss
 @dataclass(frozen=True)
 class PlayerOverlay:
     threats: set[int]
+    fork_threats: set[int]
     mobility: int
     blocked: set[int]
     profile: dict[str, float]
@@ -68,12 +70,14 @@ def build_analysis_overlay(state: GameState, *, max_candidates: int = 5) -> Anal
 
     white = PlayerOverlay(
         threats=compute_threat_squares(state, Stone.WHITE, use_fallback=False),
+        fork_threats=fork_threat_squares(state, Stone.WHITE),
         mobility=mobility_score(state, Stone.WHITE),
         blocked=blocked_stones(state, Stone.WHITE),
         profile=mobility_profile(state, Stone.WHITE),
     )
     black = PlayerOverlay(
         threats=compute_threat_squares(state, Stone.BLACK, use_fallback=False),
+        fork_threats=fork_threat_squares(state, Stone.BLACK),
         mobility=mobility_score(state, Stone.BLACK),
         blocked=blocked_stones(state, Stone.BLACK),
         profile=mobility_profile(state, Stone.BLACK),

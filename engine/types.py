@@ -28,6 +28,7 @@ class EvalBreakdown(TypedDict, total=False):
     threats_mill_in_1: float
     blocked_opponent: float
     double_threats: float
+    fork_threats: float
     connectivity: float
     initiative_strategic: float
     initiative_tactical: float
@@ -70,6 +71,7 @@ class EvalWeights:
     threats_mill_in_1: float = 2.0
     blocked_opponent: float = 0.5
     double_threats: float = 1.0
+    fork_threats: float = 1.0
     connectivity: float = 0.5
     initiative_strategic: float = 0.0
     initiative_tactical: float = 0.0

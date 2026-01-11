@@ -11,9 +11,10 @@ konkrete Zugentscheidungen uebersetzt werden.
 - Schluss: Rueckstand, reines Abtauschen verschlechtert oft.
 - Entscheidung: Taktische Kompensation suchen (Muehle, Double-Threat, Blockade).
 
-### Mills / Open Mills / Threats
+### Mills / Open Mills / Threats / Forks
 - Schluss: Taktische Initiative oder direkte Gefahr.
 - Entscheidung: Wenn Threats > 0: Mill schliessen oder gegnerische Threat blocken.
+- Forks: Mehrere Mill-in-1-Drohfelder gleichzeitig (Gegner kann nur eine blocken).
 
 ### Blocked Opponent / Blocked Stones
 - Schluss: Zugzwang- bzw. Endspielvorteil.
@@ -54,6 +55,7 @@ Reihenfolge fuer visuelle Lernwirkung:
 2. Blocked-Overlay (Steine ohne legale Zuege markieren)
 3. Mobility-Overlay (Farbintensitaet = Mobilitaet pro Stein)
 4. Double-Threat-Overlay (Felder mit 2 Muehlen)
+5. Fork-Threat-Overlay (mehrere Mill-in-1-Felder)
 
 Ziel: Entscheidungsrelevante Infos auf dem Brett sichtbar machen,
 nicht nur im Textpanel.
@@ -65,9 +67,10 @@ nicht nur im Textpanel.
 Wenn mehrere Hinweise gleichzeitig feuern, gilt folgende Reihenfolge:
 1. **Akute Taktik**: Eigene Mill-in-1 schliessen oder gegnerische Threat blocken.
 2. **Double-Threats**: Doppelte Drohung erzeugen oder verhindern.
-3. **Blockade**: Gegner blockieren, eigene Blockaden aufloesen.
-4. **Mobility**: Manövrierfaehigkeit sichern/erhoehen.
-5. **Connectivity**: langfristige Feldqualitaet verbessern.
+3. **Fork-Threats**: Mehrere Drohfelder erzeugen/verhindern.
+4. **Blockade**: Gegner blockieren, eigene Blockaden aufloesen.
+5. **Mobility**: Manoevrierfaehigkeit sichern/erhoehen.
+6. **Connectivity**: langfristige Feldqualitaet verbessern.
 
 Kurz: Erst Gefahr/Chance, dann Struktur, dann Langfrist.
 
@@ -76,17 +79,17 @@ Kurz: Erst Gefahr/Chance, dann Struktur, dann Langfrist.
 ## 5) Phasen-spezifische Ableitungen
 
 ### Placing
-- Wichtig: Open Mills, Threats, Double-Threats, Connectivity.
+- Wichtig: Open Mills, Threats, Double-Threats, Fork-Threats, Connectivity.
 - Weniger wichtig: Mobility (noch nicht stabil), Blocked nur begrenzt.
 - Entscheidung: Drohung erzeugen oder verhindern hat Prioritaet.
 
 ### Moving
-- Wichtig: Mobility, Blocked, Threats.
+- Wichtig: Mobility, Blocked, Threats, Double-Threats.
 - Entscheidung: Wenn Mobility niedrig -> entblocken; sonst Angriff/Threat.
 
 ### Flying
 - Mobility weniger relevant (freie Zuege), Blockade geringer.
-- Wichtig: Threats und Material (Endspiel).
+- Wichtig: Threats, Double-/Fork-Threats und Material (Endspiel).
 - Entscheidung: direkte Taktik und Materialerhalt.
 
 ---
@@ -96,6 +99,7 @@ Kurz: Erst Gefahr/Chance, dann Struktur, dann Langfrist.
 Diese Schwellwerte sind Startpunkte fuer Hints:
 - **Threats vorhanden**: Threats >= 1
 - **Double-Threat**: Double-Threats >= 1
+- **Fork-Threat**: Fork-Threats >= 2 Threat-Squares
 - **Niedrige Mobility**: avg_mobility < 1.0
 - **Hohe Blockade**: blocked_ratio >= 0.4
 - **Material-Rueckstand**: material <= -2.0
@@ -120,6 +124,7 @@ Regel: maximal 3 Hints, nach Prioritaet geordnet.
 
 - Threats: `compute_threat_squares` (core/analysis.py)
 - Double-Threats: `double_threat_squares`
+- Fork-Threats: `compute_threat_squares` + Fork-Logik
 - Blocked: `blocked_stones`
 - Mobility/Profil: `mobility_profile`, `mobility_score`
 - Breakdown: `engine/eval.py` (EvalBreakdown)
@@ -131,7 +136,7 @@ Regel: maximal 3 Hints, nach Prioritaet geordnet.
 1. **Hints-Engine**: kleine pure Funktion `derive_hints(state) -> list[str]`
 2. **Phase-Regeln**: Phase-abh. Schwellen/Prio
 3. **UI**: Hints unter Why-Panel anzeigen, max. 3
-4. **Overlays**: Blocked/Mobility/Double-Threat als Toggle
+4. **Overlays**: Blocked/Mobility/Double-Threat/Fork-Threat als Toggle
 5. **Tuning**: Schwellen/Weights nach Tests
 
 ---
@@ -210,6 +215,7 @@ Damit koennen wir spaeter UI/Style getrennt von Logik halten.
 - Blocked-Overlay: markiert Steine ohne Zuege (Punkte/Umrandung).
 - Mobility-Overlay: Farbintensitaet pro Stein (0..n).
 - Double-Threat-Overlay: markiert Felder mit 2 Muehlen.
+- Fork-Threat-Overlay: markiert mehrere Drohfelder.
 
 Regel: Overlay niemals State veraendern.
 

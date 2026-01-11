@@ -321,3 +321,25 @@ def test_tactic_hints_detects_trapped_opponent_stone() -> None:
     hints = tactic_hints_for_ply(state, ply)
 
     assert 0 in hints["new_blocked_opp"]
+
+
+def test_tactic_hints_detects_missed_fork_threat() -> None:
+    """Test: Erkennt, wenn eine Fork-Drohung verpasst wird."""
+    base = GameState.initial()
+    board = list(base.board)
+
+    a1, b1, c1 = MILLS[0]
+    a2, b2, c2 = MILLS[4]
+    board[a1] = Stone.WHITE
+    board[b1] = Stone.WHITE
+    board[a2] = Stone.WHITE
+    board[b2] = Stone.WHITE
+
+    state = _state_with_board(board, to_move=Stone.WHITE, in_hand_white=1)
+    ply = Ply(kind="place", dst=10)
+
+    hints = tactic_hints_for_ply(state, ply)
+
+    assert hints["missed_fork_threat"] is True
+    assert c1 in hints["missed_fork_threats"]
+    assert c2 in hints["missed_fork_threats"]

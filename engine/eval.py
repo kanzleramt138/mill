@@ -2,7 +2,13 @@ from __future__ import annotations
 
 from typing import Tuple
 
-from core.analysis import blocked_stones, compute_threat_squares, double_threat_squares, mobility_score
+from core.analysis import (
+    blocked_stones,
+    compute_threat_squares,
+    double_threat_squares,
+    fork_threat_score,
+    mobility_score,
+)
 from core.graph import MILLS, NEIGHBORS
 from core.state import GameState, Stone, opponent
 
@@ -23,6 +29,7 @@ def evaluate(state: GameState, player: Stone, weights: EvalWeights | None = None
     w_thr = weights.threats_mill_in_1
     w_blk = weights.blocked_opponent
     w_double = weights.double_threats
+    w_fork = weights.fork_threats
     w_conn = weights.connectivity
     w_init_strat = weights.initiative_strategic
     w_init_tact = weights.initiative_tactical
@@ -34,6 +41,7 @@ def evaluate(state: GameState, player: Stone, weights: EvalWeights | None = None
         w_thr = 0.0
         w_blk = 0.0
         w_double = 0.0
+        w_fork = 0.0
         w_conn = 0.0
 
     mat = state.stones_on_board(player) - state.stones_on_board(opp)
@@ -43,9 +51,10 @@ def evaluate(state: GameState, player: Stone, weights: EvalWeights | None = None
     thr = len(compute_threat_squares(state, opp, use_fallback=False)) - len(compute_threat_squares(state, player, use_fallback=False))
     blk = len(blocked_stones(state, opp)) - len(blocked_stones(state, player))
     double_thr = len(double_threat_squares(state, player)) - len(double_threat_squares(state, opp))
+    fork_thr = fork_threat_score(state, player) - fork_threat_score(state, opp)
     conn = _connectivity_score(state, player) - _connectivity_score(state, opp)
     init_strat = mob + open_mills + blk + conn
-    init_tact = thr + double_thr
+    init_tact = thr + double_thr + fork_thr
 
     breakdown: EvalBreakdown = {
         "material": w_mat * mat,
@@ -55,6 +64,7 @@ def evaluate(state: GameState, player: Stone, weights: EvalWeights | None = None
         "threats_mill_in_1": w_thr * thr,
         "blocked_opponent": w_blk * blk,
         "double_threats": w_double * double_thr,
+        "fork_threats": w_fork * fork_thr,
         "connectivity": w_conn * conn,
         "initiative_strategic": w_init_strat * init_strat,
         "initiative_tactical": w_init_tact * init_tact,
@@ -68,6 +78,7 @@ def evaluate(state: GameState, player: Stone, weights: EvalWeights | None = None
         + breakdown["threats_mill_in_1"]
         + breakdown["blocked_opponent"]
         + breakdown["double_threats"]
+        + breakdown["fork_threats"]
         + breakdown["connectivity"]
         + breakdown["initiative_strategic"]
         + breakdown["initiative_tactical"]

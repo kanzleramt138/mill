@@ -55,6 +55,7 @@ def test_evaluate_breakdown_includes_mills_keys() -> None:
     assert "mills" in breakdown
     assert "open_mills" in breakdown
     assert "double_threats" in breakdown
+    assert "fork_threats" in breakdown
     assert "connectivity" in breakdown
     assert "initiative_strategic" in breakdown
     assert "initiative_tactical" in breakdown

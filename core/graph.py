@@ -8,6 +8,8 @@ __all__ = [
     "MILLS",
     "NEIGHBORS",
     "GRID_7x7",
+    "RING_BY_INDEX",
+    "RING_WEIGHT_BY_INDEX",
     "SYMMETRY_MAPS",
 ]
 
@@ -82,6 +84,16 @@ for _row_idx, _row in enumerate(GRID_7x7):
             continue
         _INDEX_TO_COORD[_pos] = (_row_idx, _col_idx)
         _COORD_TO_INDEX[(_row_idx, _col_idx)] = _pos
+
+_RING_NAME_BY_DEPTH = {0: "outer", 1: "middle", 2: "inner"}
+_RING_WEIGHT_BY_NAME = {"outer": 1.0, "middle": 1.25, "inner": 1.0}
+RING_BY_INDEX: Dict[int, str] = {}
+RING_WEIGHT_BY_INDEX: Dict[int, float] = {}
+for _idx, (_r, _c) in _INDEX_TO_COORD.items():
+    _depth = min(_r, _c, _GRID_SIZE - 1 - _r, _GRID_SIZE - 1 - _c)
+    _ring = _RING_NAME_BY_DEPTH.get(_depth, "inner")
+    RING_BY_INDEX[_idx] = _ring
+    RING_WEIGHT_BY_INDEX[_idx] = _RING_WEIGHT_BY_NAME[_ring]
 
 
 def _identity(r: int, c: int) -> Tuple[int, int]:
